@@ -1,48 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { motion, useScroll, useSpring, useInView, AnimatePresence } from "framer-motion";
-import {
-  ChevronLeft, ChevronRight,
-} from "lucide-react";
+import { motion, useInView, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { C, Serif, MonoLabel, ScrollProgress, Header, Footer } from "./shared";
 
-// ─── Brand tokens (mirror CSS vars) ──────────────────────────────────────────
-const C = {
-  bg:       "oklch(0.18 0.01 250)",
-  bgDeep:   "oklch(0.15 0.01 250)",
-  bgSoft:   "oklch(0.22 0.01 250)",
-  gold:     "oklch(0.78 0.14 75)",
-  goldDeep: "oklch(0.68 0.15 65)",
-  cream:    "oklch(0.96 0.01 80)",
-  dim:      "oklch(0.72 0.01 80 / 0.55)",
-  dimS:     "oklch(0.85 0.01 80 / 0.75)",
-  border:   "oklch(0.55 0.13 65 / 0.18)",
-} as const;
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-function Serif({ children, className, italic = false, style }: {
-  children: React.ReactNode; className?: string; italic?: boolean; style?: React.CSSProperties;
-}) {
-  return (
-    <span
-      className={className}
-      style={{ fontFamily: '"Instrument Serif", serif', fontStyle: italic ? "italic" : "normal", ...style }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function MonoLabel({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn("block text-[11px] font-[500] tracking-[0.28em] uppercase", className)}
-      style={{ color: C.gold }}
-    >
-      {children}
-    </span>
-  );
-}
+// ─── Section head ─────────────────────────────────────────────────────────────
 
 function SectionHead({ label, heading, sub, className }: {
   label: string; heading: React.ReactNode; sub?: string; className?: string;
@@ -74,161 +36,6 @@ function SectionHead({ label, heading, sub, className }: {
   );
 }
 
-// ─── Scroll progress ──────────────────────────────────────────────────────────
-
-function ScrollProgress() {
-  const { scrollYProgress } = useScroll();
-  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-  return (
-    <motion.div
-      className="fixed top-0 left-0 right-0 h-[2px] origin-left z-[100]"
-      style={{
-        scaleX,
-        background: `linear-gradient(90deg, ${C.goldDeep}, ${C.gold}, ${C.goldDeep})`,
-      }}
-    />
-  );
-}
-
-// ─── Wordmark ─────────────────────────────────────────────────────────────────
-
-function Wordmark({ scale = 1, inverted = false }: { scale?: number; inverted?: boolean }) {
-  const fg = inverted ? C.bg : C.cream;
-  return (
-    <div
-      style={{
-        display: "inline-flex", alignItems: "baseline",
-        fontFamily: '"Space Grotesk", sans-serif',
-        fontWeight: 300, fontSize: 22 * scale, letterSpacing: "-0.02em",
-        color: fg, lineHeight: 1,
-      }}
-    >
-      <span>fernando</span>
-      <span
-        className="dot-pulse"
-        style={{
-          display: "inline-block",
-          width: 4 * scale, height: 4 * scale, borderRadius: "50%",
-          background: C.gold, margin: `0 ${8 * scale}px ${2 * scale}px`,
-        }}
-      />
-      <span style={{ fontWeight: 500 }}>oliveira</span>
-    </div>
-  );
-}
-
-// ─── Header ───────────────────────────────────────────────────────────────────
-
-const NAV_LINKS = [
-  { label: "Serviços", href: "#services" },
-  { label: "Sobre", href: "#about" },
-  { label: "Parceiros", href: "#partners" },
-  { label: "Testemunhos", href: "#testimonials" },
-];
-
-function Header() {
-  const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
-  const { scrollY } = useScroll();
-
-  useEffect(() => scrollY.on("change", (v) => setScrolled(v > 60)), [scrollY]);
-
-  return (
-    <motion.header
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
-      style={{
-        background: scrolled ? "oklch(0.16 0.01 250 / 0.88)" : "transparent",
-        backdropFilter: scrolled ? "blur(20px)" : "none",
-        WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
-        borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",
-      }}
-    >
-      <div className="max-w-[1280px] mx-auto px-14 flex items-center justify-between py-[22px]">
-        <a href="#hero"><Wordmark /></a>
-
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-9">
-          {NAV_LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="relative text-[13px] font-[500] transition-colors duration-200 group"
-              style={{ color: C.dimS }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = C.dimS)}
-            >
-              {l.label}
-              <span
-                className="absolute -bottom-1 left-0 right-0 h-px origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
-                style={{ background: C.gold }}
-              />
-            </a>
-          ))}
-        </nav>
-
-        <a
-          href="#contact"
-          className="hidden lg:inline-flex items-center gap-2 px-6 py-[11px] rounded-full text-[13px] font-[600] text-white transition-all duration-200 hover:-translate-y-0.5"
-          style={{
-            background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`,
-            boxShadow: "0 6px 22px oklch(0.4 0.1 65 / 0.35)",
-          }}
-        >
-          Contactar
-        </a>
-
-        {/* Mobile toggle */}
-        <button
-          onClick={() => setOpen(!open)}
-          className="lg:hidden flex flex-col gap-[5px] p-2"
-          aria-label="Menu"
-        >
-          <motion.span animate={{ rotate: open ? 45 : 0, y: open ? 7 : 0 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
-          <motion.span animate={{ opacity: open ? 0 : 1 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
-          <motion.span animate={{ rotate: open ? -45 : 0, y: open ? -7 : 0 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
-        </button>
-      </div>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="lg:hidden overflow-hidden px-14 pb-6"
-            style={{ borderTop: `1px solid ${C.border}` }}
-          >
-            {NAV_LINKS.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                onClick={() => setOpen(false)}
-                className="block py-3 text-[15px] font-[500] transition-colors"
-                style={{ color: C.dimS, borderBottom: `1px solid ${C.border}` }}
-              >
-                {l.label}
-              </a>
-            ))}
-            <a
-              href="#contact"
-              onClick={() => setOpen(false)}
-              className="mt-5 inline-block px-6 py-3 rounded-full text-[13px] font-[600] text-white"
-              style={{ background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})` }}
-            >
-              Contactar →
-            </a>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.header>
-  );
-}
-
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
 const HERO_IMGS = [
@@ -247,7 +54,6 @@ function HeroSection() {
 
   return (
     <section id="hero" className="relative min-h-screen flex items-center overflow-hidden" style={{ background: C.bg }}>
-      {/* Slideshow */}
       <div className="absolute inset-0">
         {HERO_IMGS.map((src, i) => (
           <motion.div
@@ -259,7 +65,6 @@ function HeroSection() {
             <img src={src} alt="" className="w-full h-full object-cover ken-burns" />
           </motion.div>
         ))}
-        {/* Overlays */}
         <div
           className="absolute inset-0"
           style={{
@@ -269,7 +74,6 @@ function HeroSection() {
       </div>
 
       <div className="relative z-10 max-w-[1280px] mx-auto px-14 pt-[140px] pb-[120px] w-full">
-        {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -285,7 +89,6 @@ function HeroSection() {
           <span className="text-[12px] font-[500]" style={{ color: C.dimS }}>8 anos · +850 clientes · Porto</span>
         </motion.div>
 
-        {/* Headline */}
         <h1
           style={{
             fontFamily: '"Instrument Serif", serif',
@@ -313,7 +116,6 @@ function HeroSection() {
           ))}
         </h1>
 
-        {/* Lede */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -324,7 +126,6 @@ function HeroSection() {
           Consultoria imobiliária e financeira no Porto. Crédito habitação, seguros e mediação — uma única conversa, do primeiro contacto à entrega das chaves.
         </motion.p>
 
-        {/* Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -355,7 +156,6 @@ function HeroSection() {
           </a>
         </motion.div>
 
-        {/* Chips */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -380,7 +180,6 @@ function HeroSection() {
         </motion.div>
       </div>
 
-      {/* Scroll hint */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -500,7 +299,6 @@ function ServicesSection() {
               onMouseEnter={(e) => (e.currentTarget.style.background = C.bgSoft)}
               onMouseLeave={(e) => (e.currentTarget.style.background = C.bg)}
             >
-              {/* Radial glow on hover */}
               <div
                 className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
                 style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.55 0.13 65 / 0.12), transparent 60%)" }}
@@ -549,7 +347,6 @@ function AboutSection() {
     <section ref={ref} id="about" className="py-[140px]" style={{ background: C.bgDeep }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-          {/* Portrait */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -558,7 +355,7 @@ function AboutSection() {
             style={{ background: `linear-gradient(135deg, oklch(0.3 0.04 250), oklch(0.25 0.06 65))` }}
           >
             <img
-              src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=85&w=1200&auto=format&fit=crop"
+              src="/perfil.png"
               alt="Fernando Oliveira"
               className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-[1.04]"
             />
@@ -577,7 +374,6 @@ function AboutSection() {
             </div>
           </motion.div>
 
-          {/* Text */}
           <motion.div
             initial={{ opacity: 0, x: 40 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
@@ -633,42 +429,33 @@ function PartnersSection() {
         />
       </div>
 
-      {/* Marquee */}
       <div
-        className="overflow-hidden py-2"
-        style={{ maskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)" }}
+        className="overflow-hidden py-6"
+        style={{
+          maskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
+          WebkitMaskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
+        }}
       >
-        <div className="marquee-track flex gap-7" style={{ width: "max-content" }}>
+        <div className="marquee-track flex gap-20 items-center" style={{ width: "max-content" }}>
           {items.map((n, i) => (
-            <div
+            <img
               key={i}
-              className="flex-none w-[240px] h-[140px] rounded-[14px] flex items-center justify-center p-7 transition-all duration-400 hover:-translate-y-1 cursor-pointer"
-              style={{
-                background: C.cream,
-                border: `1px solid ${C.border}`,
-                filter: "grayscale(100%)",
-                opacity: 0.85,
-              }}
+              src={`/partners/partner-${n}.png`}
+              alt={`Parceiro ${n}`}
+              loading="lazy"
+              className="flex-none h-[72px] w-auto object-contain cursor-pointer"
+              style={{ opacity: 0.45, filter: "brightness(0) invert(1)", transition: "opacity 400ms, filter 400ms" }}
               onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.filter = "grayscale(0%)";
+                const el = e.currentTarget as HTMLImageElement;
                 el.style.opacity = "1";
-                el.style.boxShadow = "0 14px 38px oklch(0 0 0 / 0.4)";
+                el.style.filter = "none";
               }}
               onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLDivElement;
-                el.style.filter = "grayscale(100%)";
-                el.style.opacity = "0.85";
-                el.style.boxShadow = "none";
+                const el = e.currentTarget as HTMLImageElement;
+                el.style.opacity = "0.45";
+                el.style.filter = "brightness(0) invert(1)";
               }}
-            >
-              <img
-                src={`/partners/partner-${n}.png`}
-                alt={`Parceiro ${n}`}
-                className="max-w-full max-h-full w-auto h-auto object-contain"
-                loading="lazy"
-              />
-            </div>
+            />
           ))}
         </div>
       </div>
@@ -696,7 +483,6 @@ function ProcessSection() {
         />
 
         <div className="relative grid grid-cols-1 md:grid-cols-4 gap-0">
-          {/* Connecting line */}
           <div
             className="absolute top-[30px] hidden md:block"
             style={{ left: "8%", right: "8%", height: 1, background: `linear-gradient(90deg, transparent, ${C.gold} 20%, ${C.gold} 80%, transparent)`, opacity: 0.5 }}
@@ -767,7 +553,6 @@ function TestimonialsSection() {
               background: `linear-gradient(180deg, ${C.bgSoft}, ${C.bgDeep})`,
             }}
           >
-            {/* Big quote mark */}
             <div
               className="absolute -top-8 left-10 leading-none pointer-events-none select-none opacity-70"
               style={{ fontFamily: '"Instrument Serif", serif', fontStyle: "italic", fontSize: 140, color: C.gold, lineHeight: 1 }}
@@ -852,7 +637,6 @@ function ContactSection() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-start">
-          {/* Info */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -887,7 +671,6 @@ function ContactSection() {
             </div>
           </motion.div>
 
-          {/* Form */}
           <motion.form
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -896,7 +679,6 @@ function ContactSection() {
             onSubmit={(e) => { e.preventDefault(); setSent(true); }}
             className="space-y-4"
           >
-            {/* Row with 2 cols */}
             <div className="grid grid-cols-2 gap-4">
               {[
                 { label: "Nome",     type: "text",  placeholder: "O seu nome", required: true },
@@ -968,82 +750,6 @@ function ContactSection() {
         </div>
       </div>
     </section>
-  );
-}
-
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
-function Footer() {
-  const ref = useRef<HTMLElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
-
-  return (
-    <footer
-      ref={ref}
-      className="relative overflow-hidden pt-[90px] pb-10"
-      style={{ background: C.bgDeep, borderTop: `1px solid ${C.border}` }}
-    >
-      {/* Giant watermark */}
-      <motion.div
-        initial={{ y: "15%", scale: 0.8, opacity: 0 }}
-        animate={inView ? { y: 0, scale: 1, opacity: 1 } : {}}
-        transition={{ duration: 1.2, ease: [0.2, 0.7, 0.3, 1] }}
-        className="absolute -bottom-[8vw] left-1/2 -translate-x-1/2 pointer-events-none select-none whitespace-nowrap"
-        style={{
-          fontFamily: '"Space Grotesk", sans-serif',
-          fontWeight: 300,
-          fontSize: "22vw", lineHeight: 0.85, letterSpacing: "-0.05em",
-          color: "transparent",
-          WebkitTextStroke: "1px oklch(0.55 0.13 65 / 0.12)",
-        }}
-      >
-        fernando
-        <span style={{ display: "inline-block", width: "2vw", height: "2vw", borderRadius: "50%", background: "oklch(0.55 0.13 65 / 0.18)", margin: "0 1vw 1vw", verticalAlign: "middle" }} />
-        oliveira
-      </motion.div>
-
-      <div className="max-w-[1280px] mx-auto px-14 relative">
-        {/* Grid */}
-        <div
-          className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-14 pb-14"
-          style={{ borderBottom: `1px solid ${C.border}` }}
-        >
-          <div>
-            <Wordmark />
-            <p className="mt-5 text-[13px] leading-[1.65] max-w-[28ch]" style={{ color: C.dimS }}>
-              Consultoria imobiliária e financeira no Porto. 8 anos a acompanhar famílias e investidores do início ao fim.
-            </p>
-          </div>
-          {[
-            { h: "Serviços", links: [["Crédito habitação","#services"],["Mediação","#services"],["Seguros","#services"],["Investimento","#services"]] },
-            { h: "Sobre",    links: [["Sobre mim","#about"],["Testemunhos","#testimonials"],["Parceiros","#partners"],["Processo","#process"]] },
-            { h: "Contacto", links: [["(+351) 932 773 324","tel:+351932773324"],["foliveira.kcasa@gmail.com","mailto:foliveira.kcasa@gmail.com"],["Baguim do Monte, Porto","#contact"]] },
-          ].map((col) => (
-            <div key={col.h}>
-              <h4 className="text-[10px] tracking-[0.28em] uppercase font-[600] mb-[18px]" style={{ color: C.gold }}>{col.h}</h4>
-              {col.links.map(([label, href]) => (
-                <a
-                  key={label}
-                  href={href}
-                  className="block text-[13px] mb-[10px] transition-colors duration-200"
-                  style={{ color: C.dimS }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = C.cream)}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = C.dimS)}
-                >
-                  {label}
-                </a>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {/* Legal */}
-        <div className="mt-9 flex flex-col md:flex-row justify-between gap-3 text-[11px] tracking-[0.04em]" style={{ color: C.dim }}>
-          <div>© 2026 Fernando Oliveira · KCasa (Factores Irreverentes Lda.)</div>
-          <div>Intermediário de Crédito · BdP nº 4922</div>
-        </div>
-      </div>
-    </footer>
   );
 }
 
