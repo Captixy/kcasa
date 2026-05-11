@@ -1,602 +1,730 @@
-import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { motion, useScroll, useSpring, useInView, AnimatePresence } from "framer-motion";
 import {
-  motion,
-  useScroll,
-  useTransform,
-  AnimatePresence,
-  useInView,
-  useMotionValue,
-  useSpring,
-  type Variants,
-} from "framer-motion";
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import {
-  Home,
-  TrendingUp,
-  Shield,
-  Phone,
-  Mail,
-  MapPin,
-  Building2,
-  CreditCard,
-  FileText,
-  Users,
-  Star,
-  ChevronRight,
-  Menu,
-  X,
-  ArrowRight,
-  Zap,
-  Award,
-  ChevronDown,
-  CheckCircle2,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(ScrollTrigger);
-}
+// ─── Brand tokens (mirror CSS vars) ──────────────────────────────────────────
+const C = {
+  bg:       "oklch(0.18 0.01 250)",
+  bgDeep:   "oklch(0.15 0.01 250)",
+  bgSoft:   "oklch(0.22 0.01 250)",
+  gold:     "oklch(0.78 0.14 75)",
+  goldDeep: "oklch(0.68 0.15 65)",
+  cream:    "oklch(0.96 0.01 80)",
+  dim:      "oklch(0.72 0.01 80 / 0.55)",
+  dimS:     "oklch(0.85 0.01 80 / 0.75)",
+  border:   "oklch(0.55 0.13 65 / 0.18)",
+} as const;
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
-interface Testimonial {
-  quote: string;
-  name: string;
-  designation: string;
-  src: string;
-}
-
-type PresetType =
-  | "fade" | "slide" | "scale" | "blur" | "blur-slide"
-  | "zoom" | "flip" | "bounce" | "rotate" | "swing";
-
-type AnimatedGroupProps = {
-  children: React.ReactNode;
-  className?: string;
-  variants?: { container?: Variants; item?: Variants };
-  preset?: PresetType;
-};
-
-// ─── AnimatedGroup ────────────────────────────────────────────────────────────
-
-const defaultContainerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.12 } },
-};
-const defaultItemVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
-const presetVariants: Record<PresetType, { container: Variants; item: Variants }> = {
-  fade: { container: defaultContainerVariants, item: { hidden: { opacity: 0 }, visible: { opacity: 1 } } },
-  slide: { container: defaultContainerVariants, item: { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } } },
-  scale: { container: defaultContainerVariants, item: { hidden: { opacity: 0, scale: 0.8 }, visible: { opacity: 1, scale: 1 } } },
-  blur: { container: defaultContainerVariants, item: { hidden: { opacity: 0, filter: "blur(4px)" }, visible: { opacity: 1, filter: "blur(0px)" } } },
-  "blur-slide": { container: defaultContainerVariants, item: { hidden: { opacity: 0, filter: "blur(4px)", y: 20 }, visible: { opacity: 1, filter: "blur(0px)", y: 0 } } },
-  zoom: { container: defaultContainerVariants, item: { hidden: { opacity: 0, scale: 0.5 }, visible: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 20 } } } },
-  flip: { container: defaultContainerVariants, item: { hidden: { opacity: 0, rotateX: -90 }, visible: { opacity: 1, rotateX: 0, transition: { type: "spring", stiffness: 300, damping: 20 } } } },
-  bounce: { container: defaultContainerVariants, item: { hidden: { opacity: 0, y: -50 }, visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 10 } } } },
-  rotate: { container: defaultContainerVariants, item: { hidden: { opacity: 0, rotate: -180 }, visible: { opacity: 1, rotate: 0, transition: { type: "spring", stiffness: 200, damping: 15 } } } },
-  swing: { container: defaultContainerVariants, item: { hidden: { opacity: 0, rotate: -10 }, visible: { opacity: 1, rotate: 0, transition: { type: "spring", stiffness: 300, damping: 8 } } } },
-};
-
-function AnimatedGroup({ children, className, variants, preset }: AnimatedGroupProps) {
-  const selected = preset ? presetVariants[preset] : { container: defaultContainerVariants, item: defaultItemVariants };
+function Serif({ children, className, italic = false, style }: {
+  children: React.ReactNode; className?: string; italic?: boolean; style?: React.CSSProperties;
+}) {
   return (
-    <motion.div initial="hidden" animate="visible" variants={variants?.container ?? selected.container} className={cn(className)}>
-      {React.Children.map(children, (child, i) => (
-        <motion.div key={i} variants={variants?.item ?? selected.item}>{child}</motion.div>
-      ))}
+    <span
+      className={className}
+      style={{ fontFamily: '"Instrument Serif", serif', fontStyle: italic ? "italic" : "normal", ...style }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function MonoLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn("block text-[11px] font-[500] tracking-[0.28em] uppercase", className)}
+      style={{ color: C.gold }}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionHead({ label, heading, sub, className }: {
+  label: string; heading: React.ReactNode; sub?: string; className?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 36 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.8, ease: [0.2, 0.7, 0.3, 1] }}
+      className={cn("text-center max-w-2xl mx-auto mb-20", className)}
+    >
+      <MonoLabel className="mb-4">{label}</MonoLabel>
+      <h2
+        style={{
+          fontFamily: '"Instrument Serif", serif',
+          fontSize: "clamp(48px, 6vw, 80px)",
+          lineHeight: 1, letterSpacing: "-0.02em", color: C.cream,
+        }}
+      >
+        {heading}
+      </h2>
+      {sub && (
+        <p className="mt-5 text-[17px] leading-[1.55]" style={{ color: C.dimS }}>{sub}</p>
+      )}
     </motion.div>
   );
 }
 
-// ─── Scroll Progress Bar ──────────────────────────────────────────────────────
+// ─── Scroll progress ──────────────────────────────────────────────────────────
 
-function ScrollProgressBar() {
+function ScrollProgress() {
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-600 via-amber-400 to-amber-600 z-[100] origin-left"
-      style={{ scaleX }}
+      className="fixed top-0 left-0 right-0 h-[2px] origin-left z-[100]"
+      style={{
+        scaleX,
+        background: `linear-gradient(90deg, ${C.goldDeep}, ${C.gold}, ${C.goldDeep})`,
+      }}
     />
   );
 }
 
-// ─── Count-Up Hook ────────────────────────────────────────────────────────────
+// ─── Wordmark ─────────────────────────────────────────────────────────────────
 
-function useCountUp(target: number, duration = 1800) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
-
-  useEffect(() => {
-    if (!isInView) return;
-    let startTime: number | null = null;
-    const step = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [isInView, target, duration]);
-
-  return { count, ref };
-}
-
-// ─── Tilt Card ────────────────────────────────────────────────────────────────
-
-function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 300, damping: 30 });
-  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-8, 8]), { stiffness: 300, damping: 30 });
-
-  const handleMouse = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  }, [x, y]);
-
-  const handleLeave = useCallback(() => {
-    x.set(0);
-    y.set(0);
-  }, [x, y]);
-
+function Wordmark({ scale = 1, inverted = false }: { scale?: number; inverted?: boolean }) {
+  const fg = inverted ? C.bg : C.cream;
   return (
-    <motion.div
-      ref={ref}
-      onMouseMove={handleMouse}
-      onMouseLeave={handleLeave}
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d", perspective: 800 }}
-      className={cn("transition-shadow duration-300 hover:shadow-2xl hover:shadow-amber-900/20", className)}
+    <div
+      style={{
+        display: "inline-flex", alignItems: "baseline",
+        fontFamily: '"Space Grotesk", sans-serif',
+        fontWeight: 300, fontSize: 22 * scale, letterSpacing: "-0.02em",
+        color: fg, lineHeight: 1,
+      }}
     >
-      {children}
-    </motion.div>
-  );
-}
-
-// ─── Hero Slideshow ───────────────────────────────────────────────────────────
-
-const HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=90&w=2560&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=90&w=2560&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1613977257363-707ba9348227?q=90&w=2560&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1416331108676-a22ccb276e35?q=90&w=2560&auto=format&fit=crop",
-];
-
-function HeroSlideshow() {
-  const [current, setCurrent] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrent((c) => (c + 1) % HERO_IMAGES.length), 6000);
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      <AnimatePresence mode="sync">
-        <motion.div
-          key={current}
-          initial={{ opacity: 0, scale: 1.08 }}
-          animate={{ opacity: 1, scale: 1.0 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.8, ease: [0.25, 0.1, 0.25, 1] }}
-          className="absolute inset-0"
-        >
-          <motion.div
-            animate={{ scale: [1, 1.06] }}
-            transition={{ duration: 8, ease: "linear" }}
-            className="absolute inset-0"
-          >
-            <img
-              src={HERO_IMAGES[current]}
-              alt="Real estate"
-              className="w-full h-full object-cover"
-            />
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/70 via-slate-950/50 to-slate-950" />
-      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-transparent to-slate-950/30" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_center,_var(--tw-gradient-stops))] from-amber-900/25 via-transparent to-transparent" />
+      <span>fernando</span>
+      <span
+        className="dot-pulse"
+        style={{
+          display: "inline-block",
+          width: 4 * scale, height: 4 * scale, borderRadius: "50%",
+          background: C.gold, margin: `0 ${8 * scale}px ${2 * scale}px`,
+        }}
+      />
+      <span style={{ fontWeight: 500 }}>oliveira</span>
     </div>
   );
 }
-
-// ─── Floating Particles ───────────────────────────────────────────────────────
-
-function FloatingParticles() {
-  const particles = Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 3 + 1,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    duration: Math.random() * 15 + 10,
-    delay: Math.random() * 5,
-  }));
-
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {particles.map((p) => (
-        <motion.div
-          key={p.id}
-          className="absolute rounded-full bg-amber-400/20"
-          style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%` }}
-          animate={{ y: [0, -120, 0], opacity: [0, 0.7, 0] }}
-          transition={{ duration: p.duration, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ─── Logo ─────────────────────────────────────────────────────────────────────
-
-const Logo = ({ className }: { className?: string }) => (
-  <div className={cn("flex items-center gap-2", className)}>
-    <div className="relative">
-      <Building2 className="h-8 w-8 text-amber-500" />
-      <div className="absolute inset-0 h-8 w-8 text-amber-500 blur-md opacity-50">
-        <Building2 className="h-8 w-8" />
-      </div>
-    </div>
-    <span className="text-xl font-bold bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 bg-clip-text text-transparent tracking-tight">
-      KCasa
-    </span>
-  </div>
-);
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
-const menuItems = [
-  { name: "Serviços", href: "#services" },
-  { name: "Sobre", href: "#about" },
-  { name: "Testemunhos", href: "#testimonials" },
-  { name: "Contacto", href: "#contact" },
+const NAV_LINKS = [
+  { label: "Serviços", href: "#services" },
+  { label: "Sobre", href: "#about" },
+  { label: "Parceiros", href: "#partners" },
+  { label: "Testemunhos", href: "#testimonials" },
 ];
 
 function Header() {
-  const [menuState, setMenuState] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = useState(false);
   const { scrollY } = useScroll();
 
-  useEffect(() => {
-    return scrollY.on("change", (y) => setScrolled(y > 60));
-  }, [scrollY]);
+  useEffect(() => scrollY.on("change", (v) => setScrolled(v > 60)), [scrollY]);
 
   return (
     <motion.header
-      initial={{ y: -100, opacity: 0 }}
+      initial={{ y: -80, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
+      style={{
+        background: scrolled ? "oklch(0.16 0.01 250 / 0.88)" : "transparent",
+        backdropFilter: scrolled ? "blur(20px)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
+        borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",
+      }}
     >
-      <nav
-        data-state={menuState ? "active" : undefined}
-        className={cn(
-          "group fixed z-50 w-full transition-all duration-500",
-          scrolled
-            ? "bg-slate-950/90 backdrop-blur-2xl border-b border-amber-900/20 shadow-2xl shadow-slate-950/50"
-            : "border-b border-transparent"
-        )}
-      >
-        <div className="mx-auto max-w-7xl px-6">
-          <div className="relative flex flex-wrap items-center justify-between gap-6 py-4 lg:gap-0">
-            <div className="flex w-full items-center justify-between gap-12 lg:w-auto">
-              <a href="/" aria-label="home">
-                <Logo />
-              </a>
-              <button
-                onClick={() => setMenuState(!menuState)}
-                aria-label={menuState ? "Fechar Menu" : "Abrir Menu"}
-                className="relative z-20 -m-2.5 -mr-4 block cursor-pointer p-2.5 lg:hidden"
+      <div className="max-w-[1280px] mx-auto px-14 flex items-center justify-between py-[22px]">
+        <a href="#hero"><Wordmark /></a>
+
+        {/* Desktop nav */}
+        <nav className="hidden lg:flex items-center gap-9">
+          {NAV_LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="relative text-[13px] font-[500] transition-colors duration-200 group"
+              style={{ color: C.dimS }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = C.dimS)}
+            >
+              {l.label}
+              <span
+                className="absolute -bottom-1 left-0 right-0 h-px origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300"
+                style={{ background: C.gold }}
+              />
+            </a>
+          ))}
+        </nav>
+
+        <a
+          href="#contact"
+          className="hidden lg:inline-flex items-center gap-2 px-6 py-[11px] rounded-full text-[13px] font-[600] text-white transition-all duration-200 hover:-translate-y-0.5"
+          style={{
+            background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`,
+            boxShadow: "0 6px 22px oklch(0.4 0.1 65 / 0.35)",
+          }}
+        >
+          Contactar
+        </a>
+
+        {/* Mobile toggle */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="lg:hidden flex flex-col gap-[5px] p-2"
+          aria-label="Menu"
+        >
+          <motion.span animate={{ rotate: open ? 45 : 0, y: open ? 7 : 0 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
+          <motion.span animate={{ opacity: open ? 0 : 1 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
+          <motion.span animate={{ rotate: open ? -45 : 0, y: open ? -7 : 0 }} className="block w-[22px] h-[1.5px]" style={{ background: C.cream }} />
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="lg:hidden overflow-hidden px-14 pb-6"
+            style={{ borderTop: `1px solid ${C.border}` }}
+          >
+            {NAV_LINKS.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="block py-3 text-[15px] font-[500] transition-colors"
+                style={{ color: C.dimS, borderBottom: `1px solid ${C.border}` }}
               >
-                <AnimatePresence mode="wait">
-                  {menuState ? (
-                    <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <X className="size-6 text-amber-100" />
-                    </motion.div>
-                  ) : (
-                    <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.2 }}>
-                      <Menu className="size-6 text-amber-100" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </button>
-
-              <div className="hidden lg:block">
-                <ul className="flex gap-8 text-sm">
-                  {menuItems.map((item, index) => (
-                    <li key={index}>
-                      <a
-                        href={item.href}
-                        className="relative text-amber-100/70 hover:text-amber-400 block duration-150 font-medium group/nav"
-                      >
-                        {item.name}
-                        <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-amber-500 transition-all duration-300 group-hover/nav:w-full" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <AnimatePresence>
-              {(menuState || true) && (
-                <div className={cn(
-                  "bg-slate-950/95 backdrop-blur-xl group-data-[state=active]:block lg:group-data-[state=active]:flex mb-6 hidden w-full flex-wrap items-center justify-end space-y-8 rounded-2xl border border-amber-900/20 p-6 shadow-2xl md:flex-nowrap lg:m-0 lg:flex lg:w-fit lg:gap-6 lg:space-y-0 lg:border-transparent lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-none"
-                )}>
-                  <div className="lg:hidden">
-                    <ul className="space-y-6 text-base">
-                      {menuItems.map((item, index) => (
-                        <li key={index}>
-                          <a href={item.href} className="text-amber-100/70 hover:text-amber-400 block duration-150" onClick={() => setMenuState(false)}>
-                            {item.name}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                    <Button asChild size="sm" className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600 text-white border-0 rounded-full px-6 shadow-lg shadow-amber-900/30">
-                      <a href="#contact">Contactar</a>
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </nav>
+                {l.label}
+              </a>
+            ))}
+            <a
+              href="#contact"
+              onClick={() => setOpen(false)}
+              className="mt-5 inline-block px-6 py-3 rounded-full text-[13px] font-[600] text-white"
+              style={{ background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})` }}
+            >
+              Contactar →
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.header>
   );
 }
 
 // ─── Hero ─────────────────────────────────────────────────────────────────────
 
+const HERO_IMGS = [
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=85&w=2400&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?q=85&w=2400&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1613977257363-707ba9348227?q=85&w=2400&auto=format&fit=crop",
+];
+
 function HeroSection() {
-  const ref = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const opacity = useTransform(scrollYProgress, [0, 0.6], [1, 0]);
+  const [imgIdx, setImgIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setImgIdx((i) => (i + 1) % HERO_IMGS.length), 6000);
+    return () => clearInterval(t);
+  }, []);
 
   return (
-    <section ref={ref} id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950">
-      <HeroSlideshow />
-      <FloatingParticles />
+    <section id="hero" className="relative min-h-screen flex items-center overflow-hidden" style={{ background: C.bg }}>
+      {/* Slideshow */}
+      <div className="absolute inset-0">
+        {HERO_IMGS.map((src, i) => (
+          <motion.div
+            key={src}
+            className="absolute inset-0"
+            animate={{ opacity: i === imgIdx ? 1 : 0 }}
+            transition={{ duration: 1.6, ease: "easeInOut" }}
+          >
+            <img src={src} alt="" className="w-full h-full object-cover ken-burns" />
+          </motion.div>
+        ))}
+        {/* Overlays */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `linear-gradient(180deg, oklch(0.18 0.01 250 / 0.7) 0%, oklch(0.18 0.01 250 / 0.5) 50%, ${C.bg} 100%), radial-gradient(ellipse at top, oklch(0.55 0.13 65 / 0.25), transparent 60%)`,
+          }}
+        />
+      </div>
 
-      {/* Subtle grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.03)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
-
-      <motion.div style={{ y, opacity }} className="relative z-10 mx-auto max-w-7xl px-6 py-32 w-full">
-        <AnimatedGroup
-          variants={{
-            container: { visible: { transition: { staggerChildren: 0.12, delayChildren: 0.4 } } },
-            item: {
-              hidden: { opacity: 0, filter: "blur(16px)", y: 30 },
-              visible: { opacity: 1, filter: "blur(0px)", y: 0, transition: { type: "spring", bounce: 0.25, duration: 1.4 } },
-            },
+      <div className="relative z-10 max-w-[1280px] mx-auto px-14 pt-[140px] pb-[120px] w-full">
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15, duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }}
+          className="inline-flex items-center gap-[10px] px-4 py-2 rounded-full mb-8"
+          style={{
+            background: "oklch(0.45 0.1 65 / 0.18)",
+            border: `1px solid oklch(0.6 0.13 65 / 0.35)`,
+            backdropFilter: "blur(8px)",
           }}
         >
-          <div className="text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-900/20 border border-amber-700/30 mb-10 backdrop-blur-sm">
-              <div className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-              <Star className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-sm text-amber-100/90 font-medium tracking-wide">8 Anos de Experiência · +850 Clientes</span>
-            </div>
-
-            <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
-              Consultoria
-              <br />
-              <span className="bg-gradient-to-r from-amber-500 via-amber-300 to-amber-600 bg-clip-text text-transparent">
-                Imobiliária
-              </span>
-              <br />
-              <span className="text-5xl md:text-7xl font-bold text-amber-50/80">& Financeira</span>
-            </h1>
-
-            <p className="text-lg md:text-xl text-amber-100/60 mb-14 max-w-2xl mx-auto leading-relaxed font-light">
-              Soluções completas em crédito, seguros e mediação imobiliária.
-              Acompanhamento personalizado do início ao fim — pela <span className="text-amber-400 font-medium">KCasa</span>.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
-              <Button asChild size="lg" className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white border-0 px-10 py-6 text-base rounded-full shadow-2xl shadow-amber-900/40 transition-all duration-300 hover:shadow-amber-700/40 hover:scale-105">
-                <a href="#contact" className="flex items-center gap-2">
-                  Avaliar Imóvel
-                  <ArrowRight className="h-5 w-5" />
-                </a>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/20 text-white bg-white/5 hover:bg-white/10 backdrop-blur-sm px-10 py-6 text-base rounded-full transition-all duration-300 hover:scale-105">
-                <a href="#contact">Simular Crédito</a>
-              </Button>
-            </div>
-
-            {/* Floating stats pills */}
-            <div className="flex flex-wrap justify-center gap-3">
-              {[
-                { label: "+850 Clientes", icon: <Users className="h-3.5 w-3.5" /> },
-                { label: "+200 Imóveis", icon: <Home className="h-3.5 w-3.5" /> },
-                { label: "Reg. BdP #4922", icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1.2 + i * 0.1, duration: 0.5 }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-sm text-amber-100/70"
-                >
-                  <span className="text-amber-500">{item.icon}</span>
-                  {item.label}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </AnimatedGroup>
-      </motion.div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-amber-100/40 z-10"
-        animate={{ y: [0, 8, 0] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <span className="text-xs tracking-widest uppercase font-medium">Scroll</span>
-        <ChevronDown className="h-5 w-5" />
-      </motion.div>
-
-      {/* Bottom fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none" />
-    </section>
-  );
-}
-
-// ─── Proof / Stats ────────────────────────────────────────────────────────────
-
-function StatCounter({ target, suffix = "", label }: { target: number; suffix?: string; label: string }) {
-  const { count, ref } = useCountUp(target);
-  return (
-    <div ref={ref} className="text-center group">
-      <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-amber-400 via-amber-300 to-amber-500 bg-clip-text text-transparent mb-2 tabular-nums">
-        {suffix}{count}
-      </div>
-      <div className="text-amber-100/50 text-sm font-medium tracking-wide uppercase">{label}</div>
-    </div>
-  );
-}
-
-function ProofSection() {
-  const ref = useRef<HTMLElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-
-  return (
-    <section ref={ref} id="about" className="relative py-28 bg-slate-900 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-900/10 via-transparent to-transparent" />
-
-      <div className="mx-auto max-w-7xl px-6 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          className="text-center mb-16"
-        >
-          <p className="text-amber-500 text-sm font-semibold tracking-widest uppercase mb-3">Os Nossos Números</p>
-          <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight">Resultados que falam por si</h2>
+          <span className="live-pulse w-[7px] h-[7px] rounded-full" style={{ background: C.gold }} />
+          <span className="text-[12px] font-[500]" style={{ color: C.dimS }}>8 anos · +850 clientes · Porto</span>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-          <StatCounter target={850} suffix="+" label="Clientes Satisfeitos" />
-          <StatCounter target={200} suffix="+" label="Imóveis Angariados" />
-          <StatCounter target={8} label="Anos de Experiência" />
-          <StatCounter target={1} label="Prémio da Indústria" />
-        </div>
+        {/* Headline */}
+        <h1
+          style={{
+            fontFamily: '"Instrument Serif", serif',
+            fontSize: "clamp(64px, 9vw, 120px)",
+            lineHeight: 0.92, letterSpacing: "-0.025em",
+            color: C.cream, maxWidth: "14ch",
+          }}
+        >
+          {["A próxima casa", <>começa com a <em style={{ fontStyle: "italic", color: C.gold }}>pessoa</em></>, "certa ao seu lado."].map((line, i) => (
+            <motion.span
+              key={i}
+              className="block overflow-hidden pb-[0.05em]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <motion.span
+                className="inline-block"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                transition={{ duration: 1, delay: 0.25 + i * 0.15, ease: [0.2, 0.7, 0.3, 1] }}
+              >
+                {line}
+              </motion.span>
+            </motion.span>
+          ))}
+        </h1>
 
-        {/* Horizontal divider line */}
-        <div className="mt-20 pt-8 border-t border-amber-900/20 flex flex-col md:flex-row items-center justify-center gap-8 text-center">
-          <p className="text-amber-100/50 text-sm max-w-2xl leading-relaxed">
-            A <span className="text-amber-400 font-medium">KCasa</span> (Factores Irreverentes Unipessoal Lda) é um intermediário de crédito registado no Banco de Portugal sob o n.º 4922, oferecendo soluções integradas em crédito, seguros e mediação imobiliária.
-          </p>
+        {/* Lede */}
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }}
+          className="mt-8 text-[18px] leading-[1.55] max-w-[52ch]"
+          style={{ color: C.dimS }}
+        >
+          Consultoria imobiliária e financeira no Porto. Crédito habitação, seguros e mediação — uma única conversa, do primeiro contacto à entrega das chaves.
+        </motion.p>
+
+        {/* Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.95, duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }}
+          className="mt-11 flex gap-3 flex-wrap"
+        >
+          <a
+            href="#contact"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-[600] text-white transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`,
+              boxShadow: "0 6px 22px oklch(0.4 0.1 65 / 0.35)",
+            }}
+          >
+            Marcar conversa →
+          </a>
+          <a
+            href="#partners"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-[500] transition-all duration-200 hover:bg-white/10"
+            style={{
+              background: "oklch(1 0 0 / 0.06)",
+              border: "1px solid oklch(1 0 0 / 0.14)",
+              color: C.cream,
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            Ver parceiros
+          </a>
+        </motion.div>
+
+        {/* Chips */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }}
+          className="mt-20 flex gap-[10px] flex-wrap"
+        >
+          {["Reg. BdP nº 4922", "+200 imóveis angariados", "Resposta em 24h"].map((chip) => (
+            <div
+              key={chip}
+              className="inline-flex items-center gap-2 px-[14px] py-2 rounded-full text-[12px]"
+              style={{
+                background: "oklch(1 0 0 / 0.05)",
+                border: "1px solid oklch(1 0 0 / 0.1)",
+                color: C.dimS,
+                backdropFilter: "blur(6px)",
+              }}
+            >
+              <span className="w-[5px] h-[5px] rounded-full flex-none" style={{ background: C.gold }} />
+              {chip}
+            </div>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Scroll hint */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.5 }}
+        className="absolute bottom-7 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 text-[10px] tracking-[0.3em] uppercase"
+        style={{ color: "oklch(0.85 0.01 80 / 0.4)" }}
+      >
+        <span>Scroll</span>
+        <div className="scroll-bar w-px h-10" style={{ background: `linear-gradient(to bottom, transparent, ${C.gold})` }} />
+      </motion.div>
+    </section>
+  );
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+function useCountUp(target: number, duration = 1600) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+
+  useEffect(() => {
+    if (!inView) return;
+    const start = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min((t - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setCount(Math.floor(eased * target));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [inView, target, duration]);
+
+  return { count, ref };
+}
+
+function Stat({ target, suffix = "", label, desc, delay = 0 }: {
+  target: number; suffix?: string; label: string; desc: string; delay?: number;
+}) {
+  const { count, ref } = useCountUp(target);
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 36 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.8, ease: [0.2, 0.7, 0.3, 1] }}
+      viewport={{ once: true, margin: "-60px" }}
+    >
+      <div
+        style={{
+          fontFamily: '"Instrument Serif", serif',
+          fontSize: 88, lineHeight: 1, letterSpacing: "-0.03em",
+          background: `linear-gradient(180deg, ${C.cream} 0%, ${C.gold} 120%)`,
+          WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {count}{suffix}
+      </div>
+      <div className="mt-2 text-[11px] tracking-[0.24em] uppercase font-[500]" style={{ color: C.dim }}>{label}</div>
+      <p className="mt-3 text-[13px] leading-[1.5] max-w-[26ch]" style={{ color: C.dimS }}>{desc}</p>
+    </motion.div>
+  );
+}
+
+function StatsSection() {
+  return (
+    <section
+      className="py-[100px] relative"
+      style={{ background: C.bgDeep, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}
+    >
+      <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, oklch(0.55 0.13 65 / 0.08), transparent 60%)" }} />
+      <div className="max-w-[1280px] mx-auto px-14 grid grid-cols-2 md:grid-cols-4 gap-12 relative">
+        <Stat target={850} suffix="+" label="Clientes" desc="Famílias e investidores acompanhados desde 2017." delay={0} />
+        <Stat target={200} suffix="+" label="Imóveis"  desc="Mediação e angariação em todo o Grande Porto." delay={0.08} />
+        <Stat target={8}   label="Anos"    desc="Experiência consolidada no setor imobiliário e financeiro." delay={0.16} />
+        <Stat target={98}  suffix="%" label="Recomendação" desc="Taxa de clientes que voltariam a trabalhar comigo." delay={0.24} />
+      </div>
+    </section>
+  );
+}
+
+// ─── Services ─────────────────────────────────────────────────────────────────
+
+const SERVICES = [
+  { glyph: "C", title: "Crédito Habitação",     desc: "Melhores condições junto dos principais bancos. Eu negoceio, você assina.", tag: "Popular" },
+  { glyph: "M", title: "Mediação Imobiliária",  desc: "Comprar, vender ou arrendar — com avaliação rigorosa e marketing pensado para o seu imóvel." },
+  { glyph: "S", title: "Seguros",               desc: "Proteção para si, família e património. Comparo o mercado por si." },
+  { glyph: "T", title: "Transferência de Crédito", desc: "Reveja o seu crédito atual. Se houver melhor, mudamos sem complicações." },
+  { glyph: "A", title: "Avaliação de Imóveis",  desc: "Avaliações independentes e transparentes do valor real do seu imóvel." },
+  { glyph: "I", title: "Investimento",          desc: "Rentabilidade pensada — onde comprar, a que preço, para que retorno." },
+];
+
+function ServicesSection() {
+  return (
+    <section id="services" className="py-[140px]" style={{ background: C.bg }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead
+          label="O que faço"
+          heading={<>Soluções integradas, <Serif italic style={{ color: C.gold }}>uma única pessoa</Serif>.</>}
+          sub="Crédito, seguros e mediação imobiliária — tudo coordenado do mesmo lado da mesa, sem reencaminhamentos."
+        />
+
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-xl"
+          style={{ background: C.border, border: `1px solid ${C.border}` }}
+        >
+          {SERVICES.map((s, i) => (
+            <motion.div
+              key={s.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: (i % 3) * 0.08, duration: 0.7, ease: [0.2, 0.7, 0.3, 1] }}
+              viewport={{ once: true, margin: "-40px" }}
+              className="relative group cursor-pointer transition-colors duration-400"
+              style={{ background: C.bg, padding: "44px 36px" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = C.bgSoft)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = C.bg)}
+            >
+              {/* Radial glow on hover */}
+              <div
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.55 0.13 65 / 0.12), transparent 60%)" }}
+              />
+              {s.tag && (
+                <span
+                  className="absolute top-[18px] right-[18px] text-[10px] tracking-[0.2em] uppercase font-[600] px-[9px] py-1 rounded-full"
+                  style={{ color: C.gold, background: "oklch(0.55 0.13 65 / 0.18)" }}
+                >
+                  {s.tag}
+                </span>
+              )}
+              <div
+                className="relative z-10 w-[52px] h-[52px] rounded-xl flex items-center justify-center mb-7 transition-all duration-500 group-hover:scale-105"
+                style={{ background: "oklch(0.55 0.13 65 / 0.12)", border: "1px solid oklch(0.6 0.13 65 / 0.25)" }}
+              >
+                <span style={{ fontFamily: '"Instrument Serif", serif', fontSize: 22, color: C.gold, fontStyle: "italic" }}>
+                  {s.glyph}
+                </span>
+              </div>
+              <h3 className="relative z-10 text-[19px] font-[500] mb-3" style={{ color: C.cream, letterSpacing: "-0.01em" }}>
+                {s.title}
+              </h3>
+              <p className="relative z-10 text-[14px] leading-[1.6]" style={{ color: C.dimS }}>{s.desc}</p>
+              <span
+                className="relative z-10 inline-flex items-center gap-[6px] mt-6 text-[12px] font-[500] transition-all duration-200 group-hover:gap-[10px]"
+                style={{ color: C.gold }}
+              >
+                Saber mais →
+              </span>
+            </motion.div>
+          ))}
         </div>
       </div>
     </section>
   );
 }
 
-// ─── Features ─────────────────────────────────────────────────────────────────
+// ─── About ────────────────────────────────────────────────────────────────────
 
-function FeaturesSection() {
-  const features = [
-    { icon: <Home className="h-7 w-7" />, title: "Crédito Habitação", description: "Melhores condições de financiamento para a sua casa própria junto dos principais bancos.", tag: "Popular" },
-    { icon: <CreditCard className="h-7 w-7" />, title: "Crédito Consolidado", description: "Junte todos os seus créditos numa única prestação mais baixa e com melhores condições." },
-    { icon: <Shield className="h-7 w-7" />, title: "Seguros", description: "Proteção completa para si, família e património com as melhores seguradoras do mercado." },
-    { icon: <TrendingUp className="h-7 w-7" />, title: "Investimento Imobiliário", description: "Apoio especializado na compra, venda e arrendamento de imóveis para investimento rentável." },
-    { icon: <FileText className="h-7 w-7" />, title: "Avaliação de Imóveis", description: "Avaliações rigorosas e transparentes do valor de mercado do seu imóvel." },
-    { icon: <Zap className="h-7 w-7" />, title: "Telecomunicações & Energia", description: "Serviços de telecomunicações, eletricidade e gás negociados para poupar mais." },
-    { icon: <Users className="h-7 w-7" />, title: "Crédito Pessoal & Auto", description: "Financiamento para automóvel, obras e necessidades pessoais com as melhores taxas." },
-    { icon: <Award className="h-7 w-7" />, title: "Transferência de Crédito", description: "Transfira o seu crédito habitação para condições mais vantajosas sem complicações." },
-  ];
+function AboutSection() {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <section id="services" className="py-28 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(251,191,36,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(251,191,36,0.02)_1px,transparent_1px)] bg-[size:80px_80px] pointer-events-none" />
+    <section ref={ref} id="about" className="py-[140px]" style={{ background: C.bgDeep }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
+          {/* Portrait */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.9, ease: [0.2, 0.7, 0.3, 1] }}
+            className="relative aspect-[4/5] rounded-2xl overflow-hidden group"
+            style={{ background: `linear-gradient(135deg, oklch(0.3 0.04 250), oklch(0.25 0.06 65))` }}
+          >
+            <img
+              src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=85&w=1200&auto=format&fit=crop"
+              alt="Fernando Oliveira"
+              className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-[1.04]"
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/60 to-transparent flex justify-between items-end">
+              <div>
+                <div style={{ fontFamily: '"Instrument Serif", serif', fontSize: 26, color: C.cream, lineHeight: 1 }}>
+                  Fernando Oliveira
+                </div>
+                <div className="text-[10px] tracking-[0.24em] uppercase mt-1" style={{ color: C.gold }}>
+                  Consultor Imobiliário
+                </div>
+              </div>
+              <div style={{ fontFamily: '"Instrument Serif", serif', fontSize: 56, lineHeight: 0.9, color: C.gold, fontStyle: "italic" }}>
+                '17
+              </div>
+            </div>
+          </motion.div>
 
-      <div className="mx-auto max-w-7xl px-6 relative z-10">
-        <div className="text-center mb-20">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-amber-500 text-sm font-semibold tracking-widest uppercase mb-3"
+          {/* Text */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.9, delay: 0.15, ease: [0.2, 0.7, 0.3, 1] }}
           >
-            O Que Oferecemos
-          </motion.p>
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-6xl font-black text-white mb-5 tracking-tight"
-          >
-            Serviços Integrados
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            viewport={{ once: true }}
-            className="text-xl text-amber-100/50 max-w-2xl mx-auto font-light"
-          >
-            Tudo o que precisa num só lugar, com a confiança de quem conhece o mercado
-          </motion.p>
+            <MonoLabel className="mb-6">Sobre mim</MonoLabel>
+            <h2 style={{ fontFamily: '"Instrument Serif", serif', fontSize: "clamp(40px, 5vw, 60px)", lineHeight: 1, color: C.cream, marginBottom: 28, letterSpacing: "-0.02em" }}>
+              Há oito anos a tratar de <Serif italic style={{ color: C.gold }}>casa</Serif> como quem trata de casa.
+            </h2>
+            <p className="text-[16px] leading-[1.65] mb-5" style={{ color: C.dimS, maxWidth: "52ch" }}>
+              Comecei em 2017, em Baguim do Monte, com uma ideia simples: cada cliente merece o tempo de uma conversa antes da pressão de uma proposta. Hoje, são mais de 850 famílias e investidores acompanhados.
+            </p>
+            <p className="text-[16px] leading-[1.65]" style={{ color: C.dimS, maxWidth: "52ch" }}>
+              Trabalho com a KCasa (Factores Irreverentes Lda.) e estou registado no Banco de Portugal como intermediário de crédito. Isso significa rigor e transparência em cada etapa — do primeiro telefonema à escritura.
+            </p>
+
+            <div className="mt-9 pt-7 grid grid-cols-2 gap-4" style={{ borderTop: `1px solid ${C.border}` }}>
+              {[
+                { t: "Registo BdP nº 4922",    s: "Intermediário de Crédito" },
+                { t: "8+ anos de experiência", s: "Mediação · Crédito · Seguros" },
+                { t: "Porto · Norte",          s: "Cobertura nacional sob pedido" },
+                { t: "Resposta em 24h",        s: "Compromisso, não promessa" },
+              ].map((c) => (
+                <div key={c.t} className="flex gap-3 items-start">
+                  <div className="w-[6px] h-[6px] rounded-full mt-[7px] flex-none" style={{ background: C.gold }} />
+                  <div>
+                    <div className="text-[14px] font-[500]" style={{ color: C.cream }}>{c.t}</div>
+                    <div className="text-[12px] mt-[3px]" style={{ color: C.dim }}>{c.s}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {features.map((feature, index) => (
+// ─── Partners ─────────────────────────────────────────────────────────────────
+
+function PartnersSection() {
+  const partners = [1, 2, 3, 4, 5, 6, 7];
+  const items = [...partners, ...partners, ...partners];
+
+  return (
+    <section id="partners" className="pt-[140px] pb-[60px]" style={{ background: C.bg }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead
+          label="Nossos parceiros"
+          heading={<>As marcas que <Serif italic style={{ color: C.gold }}>trabalham comigo</Serif>.</>}
+          sub="Bancos, seguradoras e operadores que tornam possível oferecer-lhe sempre a melhor solução do mercado."
+        />
+      </div>
+
+      {/* Marquee */}
+      <div
+        className="overflow-hidden py-2"
+        style={{ maskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)", WebkitMaskImage: "linear-gradient(90deg, transparent, black 8%, black 92%, transparent)" }}
+      >
+        <div className="marquee-track flex gap-7" style={{ width: "max-content" }}>
+          {items.map((n, i) => (
+            <div
+              key={i}
+              className="flex-none w-[240px] h-[140px] rounded-[14px] flex items-center justify-center p-7 transition-all duration-400 hover:-translate-y-1 cursor-pointer"
+              style={{
+                background: C.cream,
+                border: `1px solid ${C.border}`,
+                filter: "grayscale(100%)",
+                opacity: 0.85,
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.filter = "grayscale(0%)";
+                el.style.opacity = "1";
+                el.style.boxShadow = "0 14px 38px oklch(0 0 0 / 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.filter = "grayscale(100%)";
+                el.style.opacity = "0.85";
+                el.style.boxShadow = "none";
+              }}
+            >
+              <img
+                src={`/partners/partner-${n}.png`}
+                alt={`Parceiro ${n}`}
+                className="max-w-full max-h-full w-auto h-auto object-contain"
+                loading="lazy"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Process ──────────────────────────────────────────────────────────────────
+
+const STEPS = [
+  { n: "01", title: "Conversa inicial",  desc: "Entendo o objetivo, a urgência e o orçamento. Sem compromisso." },
+  { n: "02", title: "Plano à medida",    desc: "Apresento opções de crédito, seguros e/ou imóveis com números reais." },
+  { n: "03", title: "Negociação",        desc: "Trato dos bancos, das seguradoras e das contrapartes. Você decide." },
+  { n: "04", title: "Escritura & após",  desc: "Acompanho até à entrega das chaves — e depois, se for preciso." },
+];
+
+function ProcessSection() {
+  return (
+    <section id="process" className="py-[140px]" style={{ background: C.bgDeep }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead
+          label="Como trabalho"
+          heading={<>Quatro passos. <Serif italic style={{ color: C.gold }}>Sem mistério.</Serif></>}
+          sub="Do primeiro contacto à chave na mão — um processo claro, com prazos reais."
+        />
+
+        <div className="relative grid grid-cols-1 md:grid-cols-4 gap-0">
+          {/* Connecting line */}
+          <div
+            className="absolute top-[30px] hidden md:block"
+            style={{ left: "8%", right: "8%", height: 1, background: `linear-gradient(90deg, transparent, ${C.gold} 20%, ${C.gold} 80%, transparent)`, opacity: 0.5 }}
+          />
+
+          {STEPS.map((s, i) => (
             <motion.div
-              key={index}
+              key={s.n}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.07, duration: 0.5 }}
-              viewport={{ once: true, margin: "-50px" }}
+              transition={{ delay: i * 0.1, duration: 0.7, ease: [0.2, 0.7, 0.3, 1] }}
+              viewport={{ once: true, margin: "-40px" }}
+              className="px-5 relative"
             >
-              <TiltCard className="h-full">
-                <Card className="bg-slate-900/60 border-slate-800 hover:border-amber-700/40 transition-all duration-500 h-full backdrop-blur-sm relative overflow-hidden group/card">
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-600/0 to-amber-600/0 group-hover/card:from-amber-600/5 group-hover/card:to-transparent transition-all duration-500" />
-                  <CardHeader className="pb-0">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-600/20 to-amber-500/5 border border-amber-700/20 flex items-center justify-center text-amber-500 group-hover/card:scale-110 group-hover/card:border-amber-600/40 transition-all duration-300">
-                        {feature.icon}
-                      </div>
-                      {feature.tag && (
-                        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-600/20 text-amber-400 border border-amber-600/20">
-                          {feature.tag}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-base font-bold text-white mb-0 group-hover/card:text-amber-100 transition-colors">
-                      {feature.title}
-                    </h3>
-                  </CardHeader>
-                  <CardContent className="pt-3">
-                    <p className="text-amber-100/50 text-sm leading-relaxed">{feature.description}</p>
-                    <div className="mt-4 flex items-center gap-1 text-amber-500/70 text-xs font-medium group-hover/card:text-amber-400 transition-colors">
-                      Saber mais <ChevronRight className="h-3 w-3 group-hover/card:translate-x-1 transition-transform" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TiltCard>
+              <div
+                className="w-[60px] h-[60px] rounded-full flex items-center justify-center mx-auto mb-7 relative"
+                style={{
+                  background: C.bgDeep,
+                  border: `1px solid ${C.gold}`,
+                  boxShadow: `0 0 0 6px ${C.bgDeep}`,
+                  fontFamily: '"Instrument Serif", serif',
+                  fontSize: 24, color: C.gold, fontStyle: "italic",
+                }}
+              >
+                {s.n}
+              </div>
+              <h3 className="text-center text-[17px] font-[500] mb-2" style={{ color: C.cream }}>{s.title}</h3>
+              <p className="text-center text-[13px] leading-[1.55] max-w-[26ch] mx-auto" style={{ color: C.dimS }}>{s.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -607,136 +735,103 @@ function FeaturesSection() {
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 
-function AnimatedTestimonials({ testimonials, autoplay = false, className }: { testimonials: Testimonial[]; autoplay?: boolean; className?: string }) {
+interface Testimonial {
+  quote: string; name: string; role: string; avatar: string;
+}
+
+const TESTIMONIALS: Testimonial[] = [
+  { quote: "O Fernando ajudou-me a encontrar as melhores condições de crédito habitação. Profissionalismo e dedicação excepcionais — tratou de tudo, eu só precisei de assinar.", name: "Maria Silva", role: "Cliente · 2022", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop" },
+  { quote: "Excelente acompanhamento na venda do meu imóvel. Sempre disponível e com soluções para tudo o que ia surgindo. Recomendo de olhos fechados.", name: "João Santos", role: "Cliente · 2021", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" },
+  { quote: "Consegui consolidar todos os meus créditos com condições muito melhores. Acabou um problema que arrastava há anos. Obrigada, Fernando.", name: "Ana Costa", role: "Cliente · 2023", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&auto=format&fit=crop" },
+];
+
+function TestimonialsSection() {
   const [active, setActive] = useState(0);
-  const handleNext = () => setActive((p) => (p + 1) % testimonials.length);
-  const handlePrev = () => setActive((p) => (p - 1 + testimonials.length) % testimonials.length);
+  const go = useCallback((i: number) => setActive((i + TESTIMONIALS.length) % TESTIMONIALS.length), []);
 
   useEffect(() => {
-    if (!autoplay) return;
-    const t = setInterval(handleNext, 6000);
+    const t = setInterval(() => go(active + 1), 7000);
     return () => clearInterval(t);
-  }, [autoplay]);
+  }, [active, go]);
 
   return (
-    <div className={cn("max-w-5xl mx-auto px-4 md:px-8 py-16", className)}>
-      <div className="relative grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-        {/* Image stack */}
-        <div className="relative h-96 w-full">
-          <AnimatePresence>
-            {testimonials.map((t, i) => (
-              <motion.div
-                key={t.src}
-                initial={{ opacity: 0, scale: 0.9, rotate: (Math.random() - 0.5) * 20, z: -100 }}
-                animate={{
-                  opacity: i === active ? 1 : 0.5,
-                  scale: i === active ? 1 : 0.92,
-                  rotate: i === active ? 0 : (Math.random() - 0.5) * 12,
-                  zIndex: i === active ? 10 : testimonials.length - i,
-                  y: i === active ? [0, -12, 0] : 0,
-                }}
-                exit={{ opacity: 0, scale: 0.88, z: 100 }}
-                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute inset-0 origin-bottom"
-              >
-                <img
-                  src={t.src}
-                  alt={t.name}
-                  className="h-full w-full rounded-3xl object-cover object-center shadow-2xl shadow-slate-950/60"
-                  style={{ filter: i !== active ? "brightness(0.6)" : "none" }}
-                />
-                {i === active && (
-                  <div className="absolute inset-0 rounded-3xl ring-1 ring-amber-500/20" />
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+    <section id="testimonials" className="py-[140px]" style={{ background: C.bg }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead label="Testemunhos" heading={<>O que dizem <Serif italic style={{ color: C.gold }}>os clientes</Serif>.</>} />
 
-        {/* Text */}
-        <div className="flex flex-col justify-between py-4 min-h-[320px]">
-          <motion.div key={active} initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -24, opacity: 0 }} transition={{ duration: 0.3 }}>
-            {/* Stars */}
-            <div className="flex gap-1 mb-6">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Star key={i} className="h-4 w-4 fill-amber-500 text-amber-500" />
+        <div className="max-w-[900px] mx-auto">
+          <div
+            className="relative px-16 py-14 rounded-2xl min-h-[320px]"
+            style={{
+              border: `1px solid ${C.border}`,
+              background: `linear-gradient(180deg, ${C.bgSoft}, ${C.bgDeep})`,
+            }}
+          >
+            {/* Big quote mark */}
+            <div
+              className="absolute -top-8 left-10 leading-none pointer-events-none select-none opacity-70"
+              style={{ fontFamily: '"Instrument Serif", serif', fontStyle: "italic", fontSize: 140, color: C.gold, lineHeight: 1 }}
+            >
+              "
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.5, ease: [0.2, 0.7, 0.3, 1] }}
+              >
+                <blockquote
+                  className="text-[28px] leading-[1.35] mb-8"
+                  style={{ fontFamily: '"Instrument Serif", serif', fontStyle: "italic", color: C.cream, letterSpacing: "-0.005em" }}
+                >
+                  {TESTIMONIALS[active].quote}
+                </blockquote>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-[52px] h-[52px] rounded-full flex-none bg-cover bg-center"
+                    style={{ backgroundImage: `url('${TESTIMONIALS[active].avatar}')`, border: `1px solid ${C.border}` }}
+                  />
+                  <div>
+                    <div className="text-[15px] font-[500]" style={{ color: C.cream }}>{TESTIMONIALS[active].name}</div>
+                    <div className="text-[12px] mt-[3px] tracking-[0.1em] uppercase" style={{ color: C.gold }}>{TESTIMONIALS[active].role}</div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          <div className="flex justify-between items-center mt-9">
+            <div className="flex gap-2">
+              {TESTIMONIALS.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  className="h-2 rounded-full transition-all duration-300"
+                  style={{ width: i === active ? 28 : 8, background: i === active ? C.gold : "oklch(0.35 0.01 250)", border: 0, padding: 0 }}
+                  aria-label={`Testemunho ${i + 1}`}
+                />
               ))}
             </div>
-
-            <blockquote className="text-xl text-white/90 leading-relaxed mb-8 font-light italic">
-              "{testimonials[active].quote}"
-            </blockquote>
-
-            <div>
-              <div className="font-bold text-white text-lg">{testimonials[active].name}</div>
-              <div className="text-amber-400/70 text-sm mt-1">{testimonials[active].designation}</div>
-            </div>
-          </motion.div>
-
-          <div className="flex items-center gap-4 mt-10">
-            <button
-              onClick={handlePrev}
-              className="h-11 w-11 rounded-full bg-slate-800 border border-slate-700 hover:border-amber-600/50 hover:bg-amber-900/20 flex items-center justify-center transition-all duration-200 group/btn"
-            >
-              <ChevronRight className="h-5 w-5 text-amber-100 rotate-180 group-hover/btn:scale-110 transition-transform" />
-            </button>
-            <button
-              onClick={handleNext}
-              className="h-11 w-11 rounded-full bg-slate-800 border border-slate-700 hover:border-amber-600/50 hover:bg-amber-900/20 flex items-center justify-center transition-all duration-200 group/btn"
-            >
-              <ChevronRight className="h-5 w-5 text-amber-100 group-hover/btn:scale-110 transition-transform" />
-            </button>
-
-            {/* Dots */}
-            <div className="flex gap-2 ml-2">
-              {testimonials.map((_, i) => (
-                <button key={i} onClick={() => setActive(i)} className={cn("h-1.5 rounded-full transition-all duration-300", i === active ? "w-8 bg-amber-500" : "w-1.5 bg-slate-600 hover:bg-slate-500")} />
+            <div className="flex gap-[10px]">
+              {([["prev", -1], ["next", 1]] as const).map(([id, dir]) => (
+                <button
+                  key={id}
+                  onClick={() => go(active + dir)}
+                  className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200"
+                  style={{ background: C.bgSoft, border: `1px solid ${C.border}`, color: C.cream }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = C.gold; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}
+                  aria-label={id === "prev" ? "Anterior" : "Seguinte"}
+                >
+                  {dir === -1 ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </button>
               ))}
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function TestimonialsSection() {
-  const testimonials: Testimonial[] = [
-    {
-      quote: "O Fernando ajudou-me a encontrar as melhores condições de crédito habitação. Profissionalismo e dedicação excepcionais!",
-      name: "Maria Silva",
-      designation: "Cliente desde 2022",
-      src: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop",
-    },
-    {
-      quote: "Excelente acompanhamento na venda do meu imóvel. Sempre disponível e com soluções para tudo.",
-      name: "João Santos",
-      designation: "Cliente desde 2021",
-      src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop",
-    },
-    {
-      quote: "Consegui consolidar todos os meus créditos com condições muito melhores. Recomendo vivamente!",
-      name: "Ana Costa",
-      designation: "Cliente desde 2023",
-      src: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=400&auto=format&fit=crop",
-    },
-  ];
-
-  return (
-    <section id="testimonials" className="py-28 bg-slate-950 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(217,119,6,0.07),transparent)]" />
-      <div className="mx-auto max-w-7xl px-6 relative z-10">
-        <div className="text-center mb-4">
-          <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-amber-500 text-sm font-semibold tracking-widest uppercase mb-3">
-            Testemunhos
-          </motion.p>
-          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="text-4xl md:text-6xl font-black text-white tracking-tight">
-            O Que Dizem os
-            <br />
-            <span className="bg-gradient-to-r from-amber-500 to-amber-300 bg-clip-text text-transparent">Nossos Clientes</span>
-          </motion.h2>
-        </div>
-        <AnimatedTestimonials testimonials={testimonials} autoplay />
       </div>
     </section>
   );
@@ -745,130 +840,131 @@ function TestimonialsSection() {
 // ─── Contact ──────────────────────────────────────────────────────────────────
 
 function ContactSection() {
+  const [sent, setSent] = useState(false);
+
   return (
-    <section id="contact" className="py-28 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900 relative overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 bg-gradient-to-b from-transparent to-amber-700/30" />
+    <section id="contact" className="py-[140px]" style={{ background: C.bgDeep }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead
+          label="Falar comigo"
+          heading={<>Vamos <Serif italic style={{ color: C.gold }}>conversar</Serif>?</>}
+          sub="Sem compromisso. Resposta em 24 horas, em dias úteis."
+        />
 
-      <div className="mx-auto max-w-7xl px-6 relative z-10">
-        <div className="text-center mb-20">
-          <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-amber-500 text-sm font-semibold tracking-widest uppercase mb-3">
-            Contacto
-          </motion.p>
-          <motion.h2 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} viewport={{ once: true }} className="text-4xl md:text-6xl font-black text-white tracking-tight">
-            Vamos Conversar?
-          </motion.h2>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-12 items-start">
-          {/* Contact Info */}
-          <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }} viewport={{ once: true }}>
-            <p className="text-xl text-amber-100/60 mb-10 font-light leading-relaxed">
-              Entre em contacto connosco. Estamos prontos para ajudar a realizar os seus objetivos.
-            </p>
-
-            <div className="space-y-6">
-              {[
-                {
-                  icon: <Phone className="h-5 w-5 text-amber-500" />,
-                  label: "Telefone",
-                  content: (
-                    <>
-                      <a href="tel:+351932773324" className="block text-amber-100/70 hover:text-amber-400 transition-colors">(+351) 932 773 324</a>
-                      <a href="tel:+351938483143" className="block text-amber-100/70 hover:text-amber-400 transition-colors">(+351) 938 483 143</a>
-                    </>
-                  ),
-                },
-                {
-                  icon: <Mail className="h-5 w-5 text-amber-500" />,
-                  label: "Email",
-                  content: (
-                    <>
-                      <a href="mailto:foliveira.kcasa@gmail.com" className="block text-amber-100/70 hover:text-amber-400 transition-colors">foliveira.kcasa@gmail.com</a>
-                      <a href="mailto:fernando.oliveira@maxfinance.pt" className="block text-amber-100/70 hover:text-amber-400 transition-colors">fernando.oliveira@maxfinance.pt</a>
-                    </>
-                  ),
-                },
-                {
-                  icon: <MapPin className="h-5 w-5 text-amber-500" />,
-                  label: "Morada",
-                  content: (
-                    <p className="text-amber-100/70">
-                      Rua Dom António Castro Meireles nº 1217<br />
-                      4435-666 Baguim do Monte, Porto
-                    </p>
-                  ),
-                },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 + 0.2 }}
-                  viewport={{ once: true }}
-                  className="flex items-start gap-5 group"
-                >
-                  <div className="h-12 w-12 rounded-2xl bg-slate-800 border border-slate-700 group-hover:border-amber-700/40 group-hover:bg-amber-900/20 flex items-center justify-center flex-shrink-0 transition-all duration-300">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-amber-500/70 uppercase tracking-widest mb-1">{item.label}</div>
-                    {item.content}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              viewport={{ once: true }}
-              className="mt-10 p-5 rounded-2xl bg-gradient-to-r from-amber-900/15 to-amber-800/10 border border-amber-700/20"
-            >
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                <p className="text-sm text-amber-100/60">
-                  <strong className="text-amber-400">Intermediário de Crédito</strong> registado no Banco de Portugal — Registo nº 4922
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-start">
+          {/* Info */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: [0.2, 0.7, 0.3, 1] }}
+            viewport={{ once: true }}
+          >
+            {[
+              { l: "Telefone",  v: <a href="tel:+351932773324" style={{ fontFamily: '"Instrument Serif", serif', fontSize: 18, color: C.cream }}>(+351) 932 773 324</a> },
+              { l: "Email",     v: <a href="mailto:foliveira.kcasa@gmail.com" style={{ fontFamily: '"Instrument Serif", serif', fontSize: 18, color: C.cream }}>foliveira.kcasa@gmail.com</a> },
+              { l: "Escritório",v: <p style={{ fontFamily: '"Instrument Serif", serif', fontSize: 18, color: C.cream, lineHeight: 1.4 }}>Rua Dom António Castro Meireles 1217<br/>4435-666 Baguim do Monte, Porto</p> },
+            ].map((f) => (
+              <div key={f.l} className="mb-7">
+                <div className="text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.gold }}>{f.l}</div>
+                {f.v}
               </div>
-            </motion.div>
+            ))}
+
+            <div
+              className="mt-9 p-[22px] rounded-xl flex items-center gap-[14px]"
+              style={{ background: "oklch(0.55 0.13 65 / 0.08)", border: "1px solid oklch(0.6 0.13 65 / 0.2)" }}
+            >
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center flex-none"
+                style={{ background: "oklch(0.55 0.13 65 / 0.18)", border: `1px solid ${C.gold}`, fontFamily: '"Instrument Serif", serif', fontStyle: "italic", color: C.gold, fontSize: 16 }}
+              >
+                ✓
+              </div>
+              <div>
+                <div className="text-[13px] font-[500]" style={{ color: C.cream }}>Intermediário de Crédito</div>
+                <div className="text-[11px] mt-[2px] tracking-[0.06em]" style={{ color: C.dim }}>Banco de Portugal · Reg. nº 4922</div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Form */}
-          <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.2 }} viewport={{ once: true }}>
-            <Card className="bg-slate-900/60 border-slate-800 backdrop-blur-sm shadow-2xl shadow-slate-950/50">
-              <CardContent className="p-8">
-                <form className="space-y-5">
-                  {[
-                    { label: "Nome", type: "text", placeholder: "O seu nome" },
-                    { label: "Email", type: "email", placeholder: "seu@email.com" },
-                    { label: "Telefone", type: "tel", placeholder: "+351 ..." },
-                  ].map((field) => (
-                    <div key={field.label}>
-                      <label className="block text-xs font-semibold text-amber-100/60 uppercase tracking-widest mb-2">{field.label}</label>
-                      <input
-                        type={field.type}
-                        className="w-full px-4 py-3.5 rounded-xl bg-slate-950/70 border border-slate-700 text-white placeholder-slate-600 focus:border-amber-600/60 focus:outline-none focus:ring-2 focus:ring-amber-600/15 transition-all duration-200"
-                        placeholder={field.placeholder}
-                      />
-                    </div>
-                  ))}
-                  <div>
-                    <label className="block text-xs font-semibold text-amber-100/60 uppercase tracking-widest mb-2">Mensagem</label>
-                    <textarea
-                      rows={4}
-                      className="w-full px-4 py-3.5 rounded-xl bg-slate-950/70 border border-slate-700 text-white placeholder-slate-600 focus:border-amber-600/60 focus:outline-none focus:ring-2 focus:ring-amber-600/15 transition-all duration-200 resize-none"
-                      placeholder="Como podemos ajudar?"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white border-0 py-6 rounded-xl text-base font-semibold shadow-lg shadow-amber-900/30 hover:shadow-amber-700/40 hover:scale-[1.02] transition-all duration-300">
-                    Enviar Mensagem
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </motion.div>
+          <motion.form
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.2, 0.7, 0.3, 1] }}
+            viewport={{ once: true }}
+            onSubmit={(e) => { e.preventDefault(); setSent(true); }}
+            className="space-y-4"
+          >
+            {/* Row with 2 cols */}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { label: "Nome",     type: "text",  placeholder: "O seu nome", required: true },
+                { label: "Telefone", type: "tel",   placeholder: "+351 ..." },
+              ].map((f) => (
+                <div key={f.label}>
+                  <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>{f.label}</label>
+                  <input type={f.type} placeholder={f.placeholder} required={f.required}
+                    className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
+                    style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = C.bgSoft; }}
+                    onBlur={(e)  => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.bg; }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {[{ label: "Email", type: "email", placeholder: "seu@email.com", required: true }].map((f) => (
+              <div key={f.label}>
+                <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>{f.label}</label>
+                <input type={f.type} placeholder={f.placeholder} required={f.required}
+                  className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
+                  style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = C.bgSoft; }}
+                  onBlur={(e)  => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.bg; }}
+                />
+              </div>
+            ))}
+
+            <div>
+              <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>Como posso ajudar?</label>
+              <select
+                className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
+                style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }}
+                onBlur={(e)  => { e.currentTarget.style.borderColor = C.border; }}
+              >
+                <option>Crédito habitação</option>
+                <option>Mediação · Compra ou venda</option>
+                <option>Seguros</option>
+                <option>Transferência de crédito</option>
+                <option>Outro</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>Mensagem</label>
+              <textarea
+                rows={4} placeholder="Conte-me o que está a pensar..."
+                className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none resize-y"
+                style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit", minHeight: 110 }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = C.bgSoft; }}
+                onBlur={(e)  => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.bg; }}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={sent}
+              className="w-full py-4 rounded-[10px] text-[14px] font-[600] tracking-[0.02em] text-white transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-80"
+              style={{
+                background: sent ? "oklch(0.55 0.13 65 / 0.5)" : `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`,
+                boxShadow: "0 10px 28px oklch(0.4 0.1 65 / 0.35)",
+              }}
+            >
+              {sent ? "Mensagem enviada ✓" : "Enviar mensagem →"}
+            </button>
+          </motion.form>
         </div>
       </div>
     </section>
@@ -877,82 +973,77 @@ function ContactSection() {
 
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
-const FOOTER_STYLES = `
-@keyframes footer-breathe {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.3; }
-  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.6; }
-}
-.animate-footer-breathe {
-  animation: footer-breathe 10s ease-in-out infinite alternate;
-}
-`;
-
-function FooterComponent() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const giantTextRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!wrapperRef.current) return;
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        giantTextRef.current,
-        { y: "15vh", scale: 0.75, opacity: 0 },
-        { y: "0vh", scale: 1, opacity: 1, ease: "power2.out", scrollTrigger: { trigger: wrapperRef.current, start: "top 80%", end: "bottom bottom", scrub: 1.5 } }
-      );
-    }, wrapperRef);
-    return () => ctx.revert();
-  }, []);
+function Footer() {
+  const ref = useRef<HTMLElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: FOOTER_STYLES }} />
-      <div ref={wrapperRef} className="relative h-screen w-full" style={{ clipPath: "polygon(0% 0, 100% 0%, 100% 100%, 0 100%)" }}>
-        <footer className="fixed bottom-0 left-0 flex h-screen w-full flex-col justify-between overflow-hidden bg-slate-950 text-amber-50">
-          {/* Aurora glow */}
-          <div className="animate-footer-breathe absolute left-1/2 top-1/2 h-[70vh] w-[90vw] rounded-[50%] blur-[100px] pointer-events-none z-0" style={{ background: "radial-gradient(circle, rgba(217,119,6,0.18) 0%, rgba(251,191,36,0.08) 50%, transparent 70%)" }} />
+    <footer
+      ref={ref}
+      className="relative overflow-hidden pt-[90px] pb-10"
+      style={{ background: C.bgDeep, borderTop: `1px solid ${C.border}` }}
+    >
+      {/* Giant watermark */}
+      <motion.div
+        initial={{ y: "15%", scale: 0.8, opacity: 0 }}
+        animate={inView ? { y: 0, scale: 1, opacity: 1 } : {}}
+        transition={{ duration: 1.2, ease: [0.2, 0.7, 0.3, 1] }}
+        className="absolute -bottom-[8vw] left-1/2 -translate-x-1/2 pointer-events-none select-none whitespace-nowrap"
+        style={{
+          fontFamily: '"Space Grotesk", sans-serif',
+          fontWeight: 300,
+          fontSize: "22vw", lineHeight: 0.85, letterSpacing: "-0.05em",
+          color: "transparent",
+          WebkitTextStroke: "1px oklch(0.55 0.13 65 / 0.12)",
+        }}
+      >
+        fernando
+        <span style={{ display: "inline-block", width: "2vw", height: "2vw", borderRadius: "50%", background: "oklch(0.55 0.13 65 / 0.18)", margin: "0 1vw 1vw", verticalAlign: "middle" }} />
+        oliveira
+      </motion.div>
 
-          {/* Grid */}
-          <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundImage: "linear-gradient(to right, rgba(251,191,36,0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(251,191,36,0.03) 1px, transparent 1px)", backgroundSize: "60px 60px", maskImage: "linear-gradient(to bottom, transparent, black 30%, black 70%, transparent)" }} />
-
-          {/* Giant text */}
-          <div
-            ref={giantTextRef}
-            className="absolute -bottom-[8vh] left-1/2 -translate-x-1/2 whitespace-nowrap z-0 pointer-events-none select-none text-[22vw] font-black leading-[0.75] tracking-tighter"
-            style={{ color: "transparent", WebkitTextStroke: "1px rgba(251,191,36,0.06)", background: "linear-gradient(180deg, rgba(251,191,36,0.12) 0%, transparent 60%)", WebkitBackgroundClip: "text", backgroundClip: "text" }}
-          >
-            KCASA
+      <div className="max-w-[1280px] mx-auto px-14 relative">
+        {/* Grid */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr] gap-14 pb-14"
+          style={{ borderBottom: `1px solid ${C.border}` }}
+        >
+          <div>
+            <Wordmark />
+            <p className="mt-5 text-[13px] leading-[1.65] max-w-[28ch]" style={{ color: C.dimS }}>
+              Consultoria imobiliária e financeira no Porto. 8 anos a acompanhar famílias e investidores do início ao fim.
+            </p>
           </div>
+          {[
+            { h: "Serviços", links: [["Crédito habitação","#services"],["Mediação","#services"],["Seguros","#services"],["Investimento","#services"]] },
+            { h: "Sobre",    links: [["Sobre mim","#about"],["Testemunhos","#testimonials"],["Parceiros","#partners"],["Processo","#process"]] },
+            { h: "Contacto", links: [["(+351) 932 773 324","tel:+351932773324"],["foliveira.kcasa@gmail.com","mailto:foliveira.kcasa@gmail.com"],["Baguim do Monte, Porto","#contact"]] },
+          ].map((col) => (
+            <div key={col.h}>
+              <h4 className="text-[10px] tracking-[0.28em] uppercase font-[600] mb-[18px]" style={{ color: C.gold }}>{col.h}</h4>
+              {col.links.map(([label, href]) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="block text-[13px] mb-[10px] transition-colors duration-200"
+                  style={{ color: C.dimS }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = C.cream)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = C.dimS)}
+                >
+                  {label}
+                </a>
+              ))}
+            </div>
+          ))}
+        </div>
 
-          <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 w-full max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-5xl md:text-8xl font-black tracking-tighter mb-10 bg-gradient-to-b from-white to-white/30 bg-clip-text text-transparent leading-none">
-                Pronto para<br />começar?
-              </h2>
-
-              <div className="flex flex-wrap justify-center gap-4">
-                <Button asChild size="lg" className="bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white border-0 px-10 py-6 text-lg rounded-full shadow-2xl shadow-amber-900/40 hover:shadow-amber-700/50 hover:scale-105 transition-all duration-300">
-                  <a href="#contact">Contactar Agora <ArrowRight className="ml-2 h-5 w-5" /></a>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-white/15 text-white bg-white/5 hover:bg-white/10 px-10 py-6 text-lg rounded-full backdrop-blur-sm hover:scale-105 transition-all duration-300">
-                  <a href="#services">Ver Serviços</a>
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-
-          <div className="relative z-20 w-full pb-8 px-6 md:px-12 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/5 pt-6">
-            <div className="text-white/30 text-xs order-2 md:order-1">© 2024 KCasa · Factores Irreverentes Unipessoal Lda.</div>
-            <Logo className="order-1 md:order-2" />
-            <div className="text-white/30 text-xs order-3 text-center md:text-right">Intermediário de Crédito<br />Banco de Portugal — Reg. nº 4922</div>
-          </div>
-        </footer>
+        {/* Legal */}
+        <div className="mt-9 flex flex-col md:flex-row justify-between gap-3 text-[11px] tracking-[0.04em]" style={{ color: C.dim }}>
+          <div>© 2026 Fernando Oliveira · KCasa (Factores Irreverentes Lda.)</div>
+          <div>Intermediário de Crédito · BdP nº 4922</div>
+        </div>
       </div>
-    </>
+    </footer>
   );
 }
 
@@ -960,17 +1051,20 @@ function FooterComponent() {
 
 export default function App() {
   return (
-    <div className="relative w-full bg-slate-950 min-h-screen overflow-x-hidden">
-      <ScrollProgressBar />
+    <div style={{ background: C.bg }}>
+      <ScrollProgress />
       <Header />
       <main>
         <HeroSection />
-        <ProofSection />
-        <FeaturesSection />
+        <StatsSection />
+        <ServicesSection />
+        <AboutSection />
+        <PartnersSection />
+        <ProcessSection />
         <TestimonialsSection />
         <ContactSection />
       </main>
-      <FooterComponent />
+      <Footer />
     </div>
   );
 }
