@@ -430,32 +430,48 @@ function PartnersSection() {
       </div>
 
       <div
-        className="overflow-hidden py-6"
+        className="overflow-hidden"
         style={{
+          background: "oklch(0.95 0.01 80)",
           maskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
           WebkitMaskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
+          padding: "36px 0",
         }}
       >
         <div className="marquee-track flex gap-20 items-center" style={{ width: "max-content" }}>
           {items.map((n, i) => (
-            <img
+            <div
               key={i}
-              src={`/partners/partner-${n}.png`}
-              alt={`Parceiro ${n}`}
-              loading="lazy"
-              className="flex-none h-[72px] w-auto object-contain cursor-pointer"
-              style={{ opacity: 0.45, filter: "brightness(0) invert(1)", transition: "opacity 400ms, filter 400ms" }}
+              style={{ width: 220, height: 72, borderRadius: 6, overflow: "hidden", opacity: 0.65, flexShrink: 0, cursor: "pointer", transition: "opacity 350ms" }}
               onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLImageElement;
+                const el = e.currentTarget as HTMLDivElement;
                 el.style.opacity = "1";
-                el.style.filter = "none";
+                const img = el.firstElementChild as HTMLImageElement;
+                img.style.filter = "grayscale(0%)";
+                img.style.transform = "scale(1.08)";
               }}
               onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLImageElement;
-                el.style.opacity = "0.45";
-                el.style.filter = "brightness(0) invert(1)";
+                const el = e.currentTarget as HTMLDivElement;
+                el.style.opacity = "0.65";
+                const img = el.firstElementChild as HTMLImageElement;
+                img.style.filter = "grayscale(1)";
+                img.style.transform = "scale(1)";
               }}
-            />
+            >
+              <img
+                src={`/partners/partner-${n}.png`}
+                alt={`Parceiro ${n}`}
+                loading="lazy"
+                className="w-full h-full"
+                style={{
+                  objectFit: "cover",
+                  objectPosition: "center",
+                  filter: "grayscale(1)",
+                  transition: "filter 350ms, transform 350ms",
+                  transform: "scale(1)",
+                }}
+              />
+            </div>
           ))}
         </div>
       </div>
