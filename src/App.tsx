@@ -1,8 +1,30 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft, ChevronRight, X,
+  Home, Key, Shield, ArrowLeftRight, Ruler, TrendingUp,
+  Building, Search, Handshake, BarChart3, Calculator,
+  ClipboardCheck, FileText, CreditCard, PiggyBank,
+  Wallet, Building2, MapPin, Phone, Mail, CheckCircle,
+  Star, Award, Users, Briefcase, Globe, Heart,
+  ThumbsUp, Sparkles, Zap, Landmark, Scale, Percent,
+  BadgePercent, ClipboardList,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { C, Serif, MonoLabel, ScrollProgress, Header, Footer } from "./shared";
+import { store } from "./data/store";
+import type { Testimonial, Service, Property, Partner } from "./data/types";
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  Home, Key, Shield, ArrowLeftRight, Ruler, TrendingUp,
+  Building, Search, Handshake, BarChart3, Calculator,
+  ClipboardCheck, FileText, CreditCard, PiggyBank,
+  Wallet, Building2, MapPin, Phone, Mail, CheckCircle,
+  Star, Award, Users, Briefcase, Globe, Heart,
+  ThumbsUp, Sparkles, Zap, Landmark, Scale, Percent,
+  BadgePercent, ClipboardList,
+};
 
 // ─── Section head ─────────────────────────────────────────────────────────────
 
@@ -68,7 +90,7 @@ function HeroSection() {
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(180deg, oklch(0.18 0.01 250 / 0.7) 0%, oklch(0.18 0.01 250 / 0.5) 50%, ${C.bg} 100%), radial-gradient(ellipse at top, oklch(0.55 0.13 65 / 0.25), transparent 60%)`,
+            background: `linear-gradient(180deg, color-mix(in oklch, ${C.bgDeep} 70%, transparent) 0%, color-mix(in oklch, ${C.bgDeep} 50%, transparent) 50%, ${C.bg} 100%), radial-gradient(ellipse at top, color-mix(in oklch, ${C.gold} 25%, transparent), transparent 60%)`,
           }}
         />
       </div>
@@ -253,10 +275,10 @@ function StatsSection() {
     >
       <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, oklch(0.55 0.13 65 / 0.08), transparent 60%)" }} />
       <div className="max-w-[1280px] mx-auto px-14 grid grid-cols-2 md:grid-cols-4 gap-12 relative">
-        <Stat target={850} suffix="+" label="Clientes" desc="Famílias e investidores acompanhados desde 2017." delay={0} />
-        <Stat target={200} suffix="+" label="Imóveis"  desc="Mediação e angariação em todo o Grande Porto." delay={0.08} />
-        <Stat target={8}   label="Anos"    desc="Experiência consolidada no setor imobiliário e financeiro." delay={0.16} />
-        <Stat target={98}  suffix="%" label="Recomendação" desc="Taxa de clientes que voltariam a trabalhar comigo." delay={0.24} />
+        <Stat target={1000} suffix="+" label="Clientes" desc="Famílias e investidores acompanhados desde 2017." delay={0} />
+        <Stat target={350} suffix="+" label="Imóveis"  desc="Mediação e angariação em todo o Grande Porto." delay={0.08} />
+        <Stat target={12}  label="Anos"     desc="Experiência consolidada no setor imobiliário e financeiro." delay={0.16} />
+        <Stat target={100} suffix="+" label="Prémios"  desc="Prémios de indústria — reconhecimento e excelência." delay={0.24} />
       </div>
     </section>
   );
@@ -264,18 +286,14 @@ function StatsSection() {
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 
-const SERVICES = [
-  { glyph: "C", title: "Crédito Habitação",     desc: "Melhores condições junto dos principais bancos. Eu negoceio, você assina.", tag: "Popular" },
-  { glyph: "M", title: "Mediação Imobiliária",  desc: "Comprar, vender ou arrendar — com avaliação rigorosa e marketing pensado para o seu imóvel." },
-  { glyph: "S", title: "Seguros",               desc: "Proteção para si, família e património. Comparo o mercado por si." },
-  { glyph: "T", title: "Transferência de Crédito", desc: "Reveja o seu crédito atual. Se houver melhor, mudamos sem complicações." },
-  { glyph: "A", title: "Avaliação de Imóveis",  desc: "Avaliações independentes e transparentes do valor real do seu imóvel." },
-  { glyph: "I", title: "Investimento",          desc: "Rentabilidade pensada — onde comprar, a que preço, para que retorno." },
-];
-
 function ServicesSection() {
+  const [services] = useState<Service[]>(store.getServices);
+  const [selected, setSelected] = useState<Service | null>(null);
+
+  if (services.length === 0) return null;
+
   return (
-    <section id="services" className="py-[140px]" style={{ background: C.bg }}>
+    <section id="services" className="py-[140px]" style={{ background: C.bgSoft }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <SectionHead
           label="O que faço"
@@ -284,55 +302,119 @@ function ServicesSection() {
         />
 
         <div
-          className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-xl"
-          style={{ background: C.border, border: `1px solid ${C.border}` }}
+          className="flex flex-wrap justify-center overflow-hidden rounded-xl"
+          style={{ border: `1px solid ${C.border}` }}
         >
-          {SERVICES.map((s, i) => (
-            <motion.div
-              key={s.title}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: (i % 3) * 0.08, duration: 0.7, ease: [0.2, 0.7, 0.3, 1] }}
-              viewport={{ once: true, margin: "-40px" }}
-              className="relative group cursor-pointer transition-colors duration-400"
-              style={{ background: C.bg, padding: "44px 36px" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = C.bgSoft)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = C.bg)}
-            >
-              <div
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-                style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.55 0.13 65 / 0.12), transparent 60%)" }}
-              />
-              {s.tag && (
-                <span
-                  className="absolute top-[18px] right-[18px] text-[10px] tracking-[0.2em] uppercase font-[600] px-[9px] py-1 rounded-full"
-                  style={{ color: C.gold, background: "oklch(0.55 0.13 65 / 0.18)" }}
+          {services.map((s, i) => {
+            const Icon = ICON_MAP[s.iconName] ?? Home;
+
+            return (
+              <motion.div
+                key={s.id}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: (i % 3) * 0.08, duration: 0.7, ease: [0.2, 0.7, 0.3, 1] }}
+                viewport={{ once: true, margin: "-40px" }}
+                className="relative group cursor-pointer transition-colors duration-400 w-full md:w-1/3"
+                style={{ background: C.bgSoft, padding: "44px 36px" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = C.cardHover)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = C.bgSoft)}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                  style={{ background: "radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.55 0.13 65 / 0.12), transparent 60%)" }}
+                />
+                {s.tag && (
+                  <span
+                    className="absolute top-[18px] right-[18px] text-[10px] tracking-[0.2em] uppercase font-[600] px-[9px] py-1 rounded-full"
+                    style={{ color: C.gold, background: "oklch(0.55 0.13 65 / 0.18)" }}
+                  >
+                    {s.tag}
+                  </span>
+                )}
+                <div
+                  className="relative z-10 w-[52px] h-[52px] rounded-xl flex items-center justify-center mb-7 transition-all duration-500 group-hover:scale-105"
+                  style={{ background: "oklch(0.55 0.13 65 / 0.12)", border: "1px solid oklch(0.6 0.13 65 / 0.25)" }}
                 >
-                  {s.tag}
-                </span>
-              )}
-              <div
-                className="relative z-10 w-[52px] h-[52px] rounded-xl flex items-center justify-center mb-7 transition-all duration-500 group-hover:scale-105"
-                style={{ background: "oklch(0.55 0.13 65 / 0.12)", border: "1px solid oklch(0.6 0.13 65 / 0.25)" }}
-              >
-                <span style={{ fontFamily: '"Instrument Serif", serif', fontSize: 22, color: C.gold, fontStyle: "italic" }}>
-                  {s.glyph}
-                </span>
-              </div>
-              <h3 className="relative z-10 text-[19px] font-[500] mb-3" style={{ color: C.cream, letterSpacing: "-0.01em" }}>
-                {s.title}
-              </h3>
-              <p className="relative z-10 text-[14px] leading-[1.6]" style={{ color: C.dimS }}>{s.desc}</p>
-              <span
-                className="relative z-10 inline-flex items-center gap-[6px] mt-6 text-[12px] font-[500] transition-all duration-200 group-hover:gap-[10px]"
-                style={{ color: C.gold }}
-              >
-                Saber mais →
-              </span>
-            </motion.div>
-          ))}
+                  <Icon className="w-[22px] h-[22px]" style={{ color: C.gold }} />
+                </div>
+                <h3 className="relative z-10 text-[19px] font-[500] mb-3" style={{ color: C.cream, letterSpacing: "-0.01em" }}>
+                  {s.title}
+                </h3>
+                <p className="relative z-10 text-[14px] leading-[1.6]" style={{ color: C.dimS }}>{s.desc}</p>
+                <button
+                  onClick={() => setSelected(s)}
+                  className="relative z-10 inline-flex items-center gap-[6px] mt-6 text-[12px] font-[500] transition-all duration-200 group-hover:gap-[10px]"
+                  style={{ color: C.gold, background: "none", border: 0, cursor: "pointer", padding: 0, fontFamily: "inherit" }}
+                >
+                  Saber mais →
+                </button>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
+
+      <AnimatePresence>
+        {selected && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ position: "fixed", inset: 0, background: "oklch(0.1 0.01 250 / 0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(6px)", padding: 20 }}
+            onClick={(e) => { if (e.target === e.currentTarget) setSelected(null); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 30, scale: 0.97 }}
+              transition={{ duration: 0.35, ease: [0.2, 0.7, 0.3, 1] }}
+              style={{ width: 560, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto", background: C.bgDeep, borderRadius: 20, border: `1px solid ${C.border}`, padding: "40px 36px 36px" }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", background: "oklch(0.55 0.13 65 / 0.12)", border: "1px solid oklch(0.6 0.13 65 / 0.25)" }}>
+                    {(() => { const Icon = ICON_MAP[selected.iconName] ?? Home; return <Icon size={20} style={{ color: C.gold }} />; })()}
+                  </div>
+                  <div>
+                    <h2 style={{ fontFamily: '"Instrument Serif", serif', fontSize: 26, color: C.cream, margin: 0, letterSpacing: "-0.01em" }}>{selected.title}</h2>
+                    {selected.tag && (
+                      <span style={{ display: "inline-block", marginTop: 4, fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: C.gold, background: "oklch(0.55 0.13 65 / 0.18)", padding: "2px 8px", borderRadius: 999 }}>
+                        {selected.tag}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background: "none", border: 0, cursor: "pointer", color: C.dim, padding: 4 }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ color: C.dimS, fontSize: 15, lineHeight: 1.7, margin: "0 0 20px" }}>{selected.desc}</p>
+
+              {selected.details && (
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ fontSize: 10, letterSpacing: "0.28em", textTransform: "uppercase", color: C.gold, marginBottom: 10, fontWeight: 500 }}>Mais informações</div>
+                  <div style={{ color: C.dimS, fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{selected.details}</div>
+                </div>
+              )}
+
+              {selected.link && (
+                <a
+                  href={selected.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-[600] text-white transition-all duration-200 hover:-translate-y-0.5"
+                  style={{ background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`, boxShadow: "0 6px 22px oklch(0.4 0.1 65 / 0.35)", textDecoration: "none" }}
+                >
+                  Saber mais →
+                </a>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -413,14 +495,158 @@ function AboutSection() {
   );
 }
 
+// ─── Properties Marquee ──────────────────────────────────────────────────────
+
+function PropertyCard({ property, onClick }: { property: Property; onClick: () => void }) {
+  return (
+    <div
+      onClick={onClick}
+      className="relative overflow-hidden rounded-2xl flex-shrink-0 group cursor-pointer"
+      style={{ width: 380, height: 460 }}
+    >
+      <img
+        src={property.img}
+        alt={property.title}
+        loading="lazy"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(180deg, transparent 30%, oklch(0.12 0.01 250 / 0.88) 80%, oklch(0.15 0.01 250) 100%)",
+        }}
+      />
+      <div className="absolute top-4 right-4">
+        <span
+          className="px-[10px] py-[5px] rounded-full text-[10px] tracking-[0.2em] uppercase font-[600]"
+          style={{ color: C.gold, background: "oklch(0.15 0.01 250 / 0.7)", backdropFilter: "blur(8px)", border: "1px solid oklch(0.55 0.13 65 / 0.25)" }}
+        >
+          {property.type}
+        </span>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="text-[10px] tracking-[0.2em] uppercase font-[500] mb-2" style={{ color: C.gold }}>
+          {property.area}
+        </div>
+        <h3 className="text-[20px] font-[500] mb-[6px]" style={{ color: C.cream, letterSpacing: "-0.01em" }}>
+          {property.title}
+        </h3>
+        <p className="text-[13px]" style={{ color: C.dimS }}>{property.location}</p>
+        <div
+          className="mt-[10px] text-[24px] leading-none"
+          style={{ fontFamily: '"Instrument Serif", serif', color: C.gold, fontStyle: "italic" }}
+        >
+          {property.price}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PropertyDetailModal({ property, onClose }: { property: Property; onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.25 }}
+      style={{ position: "fixed", inset: 0, background: "oklch(0.1 0.01 250 / 0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, backdropFilter: "blur(8px)", padding: 20 }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 30, scale: 0.97 }}
+        transition={{ duration: 0.35, ease: [0.2, 0.7, 0.3, 1] }}
+        style={{ width: 640, maxWidth: "100%", maxHeight: "90vh", overflowY: "auto", background: C.bgDeep, borderRadius: 20, border: `1px solid ${C.border}` }}
+      >
+        <div style={{ position: "relative", width: "100%", aspectRatio: "16/10" }}>
+          <img src={property.img} alt={property.title} className="w-full h-full object-cover" />
+          <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, width: 36, height: 36, borderRadius: "50%", background: "oklch(0.15 0.01 250 / 0.7)", backdropFilter: "blur(8px)", border: "1px solid oklch(0.55 0.13 65 / 0.25)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: C.cream }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div style={{ padding: "28px 32px 32px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase", color: C.gold, fontWeight: 500 }}>{property.type}</span>
+            <span style={{ color: C.dim, fontSize: 10, letterSpacing: "0.1em" }}>·</span>
+            <span style={{ fontSize: 10, letterSpacing: "0.24em", textTransform: "uppercase", color: C.dim }}>{property.area}</span>
+          </div>
+          <h2 style={{ fontFamily: '"Instrument Serif", serif', fontSize: 32, color: C.cream, margin: "0 0 8px", letterSpacing: "-0.01em" }}>{property.title}</h2>
+          <p style={{ color: C.dimS, fontSize: 14, margin: "0 0 6px" }}>{property.location}</p>
+          <div style={{ fontFamily: '"Instrument Serif", serif', fontSize: 28, color: C.gold, fontStyle: "italic", marginBottom: 20 }}>{property.price}</div>
+
+          {property.link && (
+            <a
+              href={property.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-[13px] font-[600] text-white transition-all duration-200 hover:-translate-y-0.5"
+              style={{ background: `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`, boxShadow: "0 6px 22px oklch(0.4 0.1 65 / 0.35)", textDecoration: "none" }}
+            >
+              Saber mais →
+            </a>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function PropertiesSection() {
+  const [properties] = useState<Property[]>(store.getProperties);
+  const [selected, setSelected] = useState<Property | null>(null);
+
+  if (properties.length === 0) return null;
+
+  const tripled = [...properties, ...properties, ...properties];
+
+  return (
+    <section id="properties" className="py-[140px]" style={{ background: C.bgDeep }}>
+      <div className="max-w-[1280px] mx-auto px-14">
+        <SectionHead
+          label="Imóveis"
+          heading={<>Propriedades em <Serif italic style={{ color: C.gold }}>destaque</Serif>.</>}
+          sub="Uma seleção dos imóveis disponíveis neste momento. Novas oportunidades todas as semanas."
+        />
+      </div>
+
+      <div
+        className="overflow-hidden"
+        style={{
+          maskImage: "linear-gradient(90deg, transparent, black 4%, black 96%, transparent)",
+          WebkitMaskImage: "linear-gradient(90deg, transparent, black 4%, black 96%, transparent)",
+          padding: "20px 0",
+        }}
+      >
+        <div className="marquee-track flex gap-6" style={{ width: "max-content" }}>
+          {tripled.map((p, i) => (
+            <PropertyCard key={i} property={p} onClick={() => setSelected(p)} />
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {selected && (
+          <PropertyDetailModal property={selected} onClose={() => setSelected(null)} />
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
 // ─── Partners ─────────────────────────────────────────────────────────────────
 
 function PartnersSection() {
-  const partners = [1, 2, 3, 4, 5, 6, 7];
+  const [partners] = useState<Partner[]>(store.getPartners);
+
+  if (partners.length === 0) return null;
+
   const items = [...partners, ...partners, ...partners];
 
   return (
-    <section id="partners" className="pt-[140px] pb-[60px]" style={{ background: C.bg }}>
+    <section id="partners" className="pt-[140px] pb-[60px]" style={{ background: C.bgSoft }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <SectionHead
           label="Nossos parceiros"
@@ -432,42 +658,41 @@ function PartnersSection() {
       <div
         className="overflow-hidden"
         style={{
-          background: "oklch(0.95 0.01 80)",
           maskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
           WebkitMaskImage: "linear-gradient(90deg, transparent, black 6%, black 94%, transparent)",
-          padding: "36px 0",
+          padding: "40px 0",
         }}
       >
-        <div className="marquee-track flex gap-20 items-center" style={{ width: "max-content" }}>
-          {items.map((n, i) => (
+        <div className="marquee-track flex gap-16 items-center" style={{ width: "max-content" }}>
+          {items.map((p, i) => (
             <div
               key={i}
-              style={{ width: 220, height: 72, borderRadius: 6, overflow: "hidden", opacity: 0.65, flexShrink: 0, cursor: "pointer", transition: "opacity 350ms" }}
+              style={{ width: 220, height: 96, flexShrink: 0, cursor: "pointer", opacity: 0.5, transition: "opacity 350ms" }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
                 el.style.opacity = "1";
                 const img = el.firstElementChild as HTMLImageElement;
-                img.style.filter = "grayscale(0%)";
+                img.classList.add("hovered");
                 img.style.transform = "scale(1.08)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
-                el.style.opacity = "0.65";
+                el.style.opacity = "0.5";
                 const img = el.firstElementChild as HTMLImageElement;
-                img.style.filter = "grayscale(1)";
+                img.classList.remove("hovered");
                 img.style.transform = "scale(1)";
               }}
             >
               <img
-                src={`/partners/partner-${n}.png`}
-                alt={`Parceiro ${n}`}
+                src={p.img}
+                alt={p.name}
                 loading="lazy"
-                className="w-full h-full"
+                className="partner-logo"
                 style={{
-                  objectFit: "cover",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
                   objectPosition: "center",
-                  filter: "grayscale(1)",
-                  transition: "filter 350ms, transform 350ms",
                   transform: "scale(1)",
                 }}
               />
@@ -485,12 +710,12 @@ const STEPS = [
   { n: "01", title: "Conversa inicial",  desc: "Entendo o objetivo, a urgência e o orçamento. Sem compromisso." },
   { n: "02", title: "Plano à medida",    desc: "Apresento opções de crédito, seguros e/ou imóveis com números reais." },
   { n: "03", title: "Negociação",        desc: "Trato dos bancos, das seguradoras e das contrapartes. Você decide." },
-  { n: "04", title: "Escritura & após",  desc: "Acompanho até à entrega das chaves — e depois, se for preciso." },
+  { n: "04", title: "Escritura & após",  desc: "Acompanho até à entrega das chaves e faço acompanhamento pós-venda." },
 ];
 
 function ProcessSection() {
   return (
-    <section id="process" className="py-[140px]" style={{ background: C.bgDeep }}>
+    <section id="process" className="py-[140px]" style={{ background: C.bgSoft }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <SectionHead
           label="Como trabalho"
@@ -516,9 +741,9 @@ function ProcessSection() {
               <div
                 className="w-[60px] h-[60px] rounded-full flex items-center justify-center mx-auto mb-7 relative"
                 style={{
-                  background: C.bgDeep,
+                  background: C.bgSoft,
                   border: `1px solid ${C.gold}`,
-                  boxShadow: `0 0 0 6px ${C.bgDeep}`,
+                  boxShadow: `0 0 0 6px ${C.bgSoft}`,
                   fontFamily: '"Instrument Serif", serif',
                   fontSize: 24, color: C.gold, fontStyle: "italic",
                 }}
@@ -537,27 +762,20 @@ function ProcessSection() {
 
 // ─── Testimonials ─────────────────────────────────────────────────────────────
 
-interface Testimonial {
-  quote: string; name: string; role: string; avatar: string;
-}
-
-const TESTIMONIALS: Testimonial[] = [
-  { quote: "O Fernando ajudou-me a encontrar as melhores condições de crédito habitação. Profissionalismo e dedicação excepcionais — tratou de tudo, eu só precisei de assinar.", name: "Maria Silva", role: "Cliente · 2022", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&auto=format&fit=crop" },
-  { quote: "Excelente acompanhamento na venda do meu imóvel. Sempre disponível e com soluções para tudo o que ia surgindo. Recomendo de olhos fechados.", name: "João Santos", role: "Cliente · 2021", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" },
-  { quote: "Consegui consolidar todos os meus créditos com condições muito melhores. Acabou um problema que arrastava há anos. Obrigada, Fernando.", name: "Ana Costa", role: "Cliente · 2023", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200&auto=format&fit=crop" },
-];
-
 function TestimonialsSection() {
+  const [testimonials] = useState<Testimonial[]>(store.getTestimonials);
   const [active, setActive] = useState(0);
-  const go = useCallback((i: number) => setActive((i + TESTIMONIALS.length) % TESTIMONIALS.length), []);
+  const go = useCallback((i: number) => setActive((i + testimonials.length) % testimonials.length), [testimonials.length]);
 
   useEffect(() => {
     const t = setInterval(() => go(active + 1), 7000);
     return () => clearInterval(t);
   }, [active, go]);
 
+  if (testimonials.length === 0) return null;
+
   return (
-    <section id="testimonials" className="py-[140px]" style={{ background: C.bg }}>
+    <section id="testimonials" className="py-[140px]" style={{ background: C.bgDeep }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <SectionHead label="Testemunhos" heading={<>O que dizem <Serif italic style={{ color: C.gold }}>os clientes</Serif>.</>} />
 
@@ -588,16 +806,16 @@ function TestimonialsSection() {
                   className="text-[28px] leading-[1.35] mb-8"
                   style={{ fontFamily: '"Instrument Serif", serif', fontStyle: "italic", color: C.cream, letterSpacing: "-0.005em" }}
                 >
-                  {TESTIMONIALS[active].quote}
+                  {testimonials[active].quote}
                 </blockquote>
                 <div className="flex items-center gap-4">
                   <div
                     className="w-[52px] h-[52px] rounded-full flex-none bg-cover bg-center"
-                    style={{ backgroundImage: `url('${TESTIMONIALS[active].avatar}')`, border: `1px solid ${C.border}` }}
+                    style={{ backgroundImage: `url('${testimonials[active].avatar}')`, border: `1px solid ${C.border}` }}
                   />
                   <div>
-                    <div className="text-[15px] font-[500]" style={{ color: C.cream }}>{TESTIMONIALS[active].name}</div>
-                    <div className="text-[12px] mt-[3px] tracking-[0.1em] uppercase" style={{ color: C.gold }}>{TESTIMONIALS[active].role}</div>
+                    <div className="text-[15px] font-[500]" style={{ color: C.cream }}>{testimonials[active].name}</div>
+                    <div className="text-[12px] mt-[3px] tracking-[0.1em] uppercase" style={{ color: C.gold }}>{testimonials[active].role}</div>
                   </div>
                 </div>
               </motion.div>
@@ -606,7 +824,7 @@ function TestimonialsSection() {
 
           <div className="flex justify-between items-center mt-9">
             <div className="flex gap-2">
-              {TESTIMONIALS.map((_, i) => (
+              {testimonials.map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setActive(i)}
@@ -642,9 +860,40 @@ function TestimonialsSection() {
 
 function ContactSection() {
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSending(true);
+    setError("");
+
+    const form = e.currentTarget;
+    const data = {
+      name: (form.elements.namedItem("name") as HTMLInputElement)?.value ?? "",
+      phone: (form.elements.namedItem("phone") as HTMLInputElement)?.value ?? "",
+      email: (form.elements.namedItem("email") as HTMLInputElement)?.value ?? "",
+      subject: (form.elements.namedItem("subject") as HTMLSelectElement)?.value ?? "",
+      message: (form.elements.namedItem("message") as HTMLTextAreaElement)?.value ?? "",
+    };
+
+    try {
+      const res = await fetch("http://localhost:3001/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error();
+      setSent(true);
+    } catch {
+      setError("Erro ao enviar. Tente novamente ou ligue diretamente.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
-    <section id="contact" className="py-[140px]" style={{ background: C.bgDeep }}>
+    <section id="contact" className="py-[140px]" style={{ background: C.bg }}>
       <div className="max-w-[1280px] mx-auto px-14">
         <SectionHead
           label="Falar comigo"
@@ -692,17 +941,17 @@ function ContactSection() {
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.2, 0.7, 0.3, 1] }}
             viewport={{ once: true }}
-            onSubmit={(e) => { e.preventDefault(); setSent(true); }}
+            onSubmit={handleSubmit}
             className="space-y-4"
           >
             <div className="grid grid-cols-2 gap-4">
               {[
-                { label: "Nome",     type: "text",  placeholder: "O seu nome", required: true },
-                { label: "Telefone", type: "tel",   placeholder: "+351 ..." },
+                { label: "Nome",     type: "text",  name: "name", placeholder: "O seu nome", required: true },
+                { label: "Telefone", type: "tel",   name: "phone", placeholder: "+351 ..." },
               ].map((f) => (
                 <div key={f.label}>
                   <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>{f.label}</label>
-                  <input type={f.type} placeholder={f.placeholder} required={f.required}
+                  <input name={f.name} type={f.type} placeholder={f.placeholder} required={f.required}
                     className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
                     style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
                     onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = C.bgSoft; }}
@@ -712,10 +961,10 @@ function ContactSection() {
               ))}
             </div>
 
-            {[{ label: "Email", type: "email", placeholder: "seu@email.com", required: true }].map((f) => (
+            {[{ label: "Email", type: "email", name: "email", placeholder: "seu@email.com", required: true }].map((f) => (
               <div key={f.label}>
                 <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>{f.label}</label>
-                <input type={f.type} placeholder={f.placeholder} required={f.required}
+                <input name={f.name} type={f.type} placeholder={f.placeholder} required={f.required}
                   className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
                   style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
                   onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; e.currentTarget.style.background = C.bgSoft; }}
@@ -727,6 +976,7 @@ function ContactSection() {
             <div>
               <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>Como posso ajudar?</label>
               <select
+                name="subject"
                 className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none"
                 style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit" }}
                 onFocus={(e) => { e.currentTarget.style.borderColor = C.gold; }}
@@ -743,6 +993,7 @@ function ContactSection() {
             <div>
               <label className="block text-[10px] tracking-[0.28em] uppercase font-[500] mb-2" style={{ color: C.dim }}>Mensagem</label>
               <textarea
+                name="message"
                 rows={4} placeholder="Conte-me o que está a pensar..."
                 className="w-full px-4 py-[14px] rounded-[10px] text-[15px] transition-all duration-200 outline-none resize-y"
                 style={{ background: C.bg, border: `1px solid ${C.border}`, color: C.cream, fontFamily: "inherit", minHeight: 110 }}
@@ -753,15 +1004,18 @@ function ContactSection() {
 
             <button
               type="submit"
-              disabled={sent}
+              disabled={sent || sending}
               className="w-full py-4 rounded-[10px] text-[14px] font-[600] tracking-[0.02em] text-white transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-80"
               style={{
                 background: sent ? "oklch(0.55 0.13 65 / 0.5)" : `linear-gradient(135deg, ${C.goldDeep}, ${C.gold})`,
                 boxShadow: "0 10px 28px oklch(0.4 0.1 65 / 0.35)",
               }}
             >
-              {sent ? "Mensagem enviada ✓" : "Enviar mensagem →"}
+              {sending ? "A enviar..." : sent ? "Mensagem enviada ✓" : "Enviar mensagem →"}
             </button>
+            {error && (
+              <p className="text-[12px] mt-2" style={{ color: "oklch(0.65 0.2 25)" }}>{error}</p>
+            )}
           </motion.form>
         </div>
       </div>
@@ -780,6 +1034,7 @@ export default function App() {
         <HeroSection />
         <StatsSection />
         <ServicesSection />
+        <PropertiesSection />
         <AboutSection />
         <PartnersSection />
         <ProcessSection />

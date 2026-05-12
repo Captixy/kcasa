@@ -4,17 +4,19 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, useScroll, useSpring, AnimatePresence, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 
-// ─── Brand tokens ─────────────────────────────────────────────────────────────
+// ─── Brand tokens — reference CSS variables so they respond to data-theme ─────
 export const C = {
-  bg:        "oklch(0.18 0.01 250)",
-  bgDeep:    "oklch(0.15 0.01 250)",
-  bgSoft:    "oklch(0.22 0.01 250)",
-  gold:      "oklch(0.78 0.14 75)",
-  goldDeep:  "oklch(0.68 0.15 65)",
-  cream:     "oklch(0.96 0.01 80)",
-  dim:       "oklch(0.72 0.01 80 / 0.55)",
-  dimS:      "oklch(0.85 0.01 80 / 0.75)",
-  border:    "oklch(0.55 0.13 65 / 0.18)",
+  bg:        "var(--fo-bg)",
+  bgDeep:    "var(--fo-bg-deep)",
+  bgSoft:    "var(--fo-bg-soft)",
+  gold:      "var(--fo-gold)",
+  goldDeep:  "var(--fo-gold-deep)",
+  cream:     "var(--fo-cream)",
+  dim:       "var(--fo-dim)",
+  dimS:      "var(--fo-dim-s)",
+  border:    "var(--fo-border)",
+  headerBg:  "var(--fo-header-bg)",
+  cardHover: "var(--fo-card-hover)",
 } as const;
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
@@ -58,8 +60,8 @@ export function ScrollProgress() {
 
 // ─── Wordmark ─────────────────────────────────────────────────────────────────
 
-export function Wordmark({ scale = 1, inverted = false }: { scale?: number; inverted?: boolean }) {
-  const fg = inverted ? C.bg : C.cream;
+export function Wordmark({ scale = 1, inverted = false, textColor }: { scale?: number; inverted?: boolean; textColor?: string }) {
+  const fg = textColor ?? (inverted ? C.bg : C.cream);
   return (
     <div
       style={{
@@ -108,7 +110,7 @@ export function Header() {
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       className="fixed top-0 left-0 right-0 z-50 transition-all duration-500"
       style={{
-        background: scrolled ? "oklch(0.16 0.01 250 / 0.88)" : "transparent",
+        background: scrolled ? C.headerBg : "transparent",
         backdropFilter: scrolled ? "blur(20px)" : "none",
         WebkitBackdropFilter: scrolled ? "blur(20px)" : "none",
         borderBottom: scrolled ? `1px solid ${C.border}` : "1px solid transparent",

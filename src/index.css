@@ -5,15 +5,18 @@
 
 /* ── Brand CSS variables ─────────────────────────────────────────────── */
 :root {
-  --fo-bg:       oklch(0.18 0.01 250);
-  --fo-bg-deep:  oklch(0.15 0.01 250);
-  --fo-bg-soft:  oklch(0.22 0.01 250);
-  --fo-gold:     oklch(0.78 0.14 75);
-  --fo-gold-deep:oklch(0.68 0.15 65);
-  --fo-cream:    oklch(0.96 0.01 80);
-  --fo-dim:      oklch(0.72 0.01 80 / 0.55);
-  --fo-dim-s:    oklch(0.85 0.01 80 / 0.75);
-  --fo-border:   oklch(0.55 0.13 65 / 0.18);
+  /* Dark mode (default) */
+  --fo-bg:            oklch(0.18 0.01 250);
+  --fo-bg-deep:       oklch(0.15 0.01 250);
+  --fo-bg-soft:       oklch(0.22 0.01 250);
+  --fo-gold:          oklch(0.78 0.14 75);
+  --fo-gold-deep:     oklch(0.68 0.15 65);
+  --fo-cream:         oklch(0.96 0.01 80);
+  --fo-dim:           oklch(0.72 0.01 80 / 0.55);
+  --fo-dim-s:         oklch(0.85 0.01 80 / 0.75);
+  --fo-border:        oklch(0.55 0.13 65 / 0.18);
+  --fo-header-bg:     oklch(0.16 0.01 250 / 0.88);
+  --fo-card-hover:    oklch(0.26 0.015 250);
 
   /* shadcn tokens mapped to brand */
   --radius: 0.75rem;
@@ -27,6 +30,21 @@
   --muted-foreground: var(--fo-dim-s);
   --border: var(--fo-border);
   --ring: var(--fo-gold);
+}
+
+/* ── Light mode overrides ─────────────────────────────────────────────── */
+[data-theme="light"] {
+  --fo-bg:          oklch(0.97 0.008 78);
+  --fo-bg-deep:     oklch(0.93 0.012 76);
+  --fo-bg-soft:     oklch(0.99 0.004 80);
+  --fo-gold:        oklch(0.54 0.15 68);
+  --fo-gold-deep:   oklch(0.47 0.16 65);
+  --fo-cream:       oklch(0.13 0.01 250);
+  --fo-dim:         oklch(0.45 0.02 250 / 0.75);
+  --fo-dim-s:       oklch(0.30 0.02 250 / 0.85);
+  --fo-border:      oklch(0.72 0.03 75 / 0.45);
+  --fo-header-bg:   oklch(0.97 0.008 78 / 0.92);
+  --fo-card-hover:  oklch(0.91 0.012 76);
 }
 
 @theme inline {
@@ -60,6 +78,26 @@
   button { font: inherit; cursor: pointer; }
 }
 
+/* ── Partner logos ───────────────────────────────────────────────────── */
+.partner-logo {
+  filter: invert(1) grayscale(1);
+  mix-blend-mode: screen;
+  transition: filter 350ms, transform 350ms;
+}
+[data-theme="light"] .partner-logo {
+  filter: grayscale(1) opacity(0.55);
+  mix-blend-mode: multiply;
+}
+.partner-logo.hovered {
+  filter: invert(1);
+  mix-blend-mode: screen;
+}
+[data-theme="light"] .partner-logo.hovered {
+  filter: grayscale(1);
+  mix-blend-mode: multiply;
+  opacity: 1;
+}
+
 /* ── Animations ──────────────────────────────────────────────────────── */
 @keyframes dot-pulse {
   0%, 100% { box-shadow: 0 0 0 0 oklch(0.78 0.14 75 / 0.5); }
@@ -89,3 +127,11 @@
 
 .marquee-track { animation: marquee-scroll 40s linear infinite; }
 .marquee-track:hover { animation-play-state: paused; }
+
+.marquee-reverse { animation: marquee-reverse 50s linear infinite; }
+.marquee-reverse:hover { animation-play-state: paused; }
+
+@keyframes marquee-reverse {
+  from { transform: translateX(-33.333%); }
+  to   { transform: translateX(0); }
+}
